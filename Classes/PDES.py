@@ -38,13 +38,7 @@ class PDES:
 
 
     def df(self, n_part, list_east = []):
-        #! substituir N e S.
-        #! Juntar listas.
-        #! Definir default
-        #! Preparar para runge kutta.
-        #! Gerar dvars
-        
-        
+       
         # Gerando lista das variáveis dependentes
         xd_var = self.xs(self.funcs)
 
@@ -154,8 +148,7 @@ class PDES:
                 
                 list_positions.append(list_aux)    
                 
-        print('Lista 3: ', list_positions)
-        print('\n')
+
         
         # * Substituindo centros na lista de posições
         if len(str_sp_vars) == 2:
@@ -171,14 +164,11 @@ class PDES:
             list_south = [[] for i in range(len(list_eq))]
             for i in range(len(list_eq)): # para cada lista de equações discretizadas
                 for j in range(0, len(list_eq[i])): # para cada equação da lista
-                    print(j%(n_part[1]-2))
-                    print('j:', j, 'npart[1]-2:', n_part[1]-2)
                     if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)
                         list_south[i].append(list_eq[i][j])
                         list_north[i].append(list_eq[i][j+n_part[1]-3])
                     
-            print('Lista north:', list_north)
-            print('Lista south:', list_south)
+
             
             # * Gerando lista leste
             if list_east == []:
@@ -204,14 +194,23 @@ class PDES:
                     list_east[ii].append(list_eq[ii][n_part[0]])
         
         # * Substituindo as posições por equações
+        final_list_eq = []
         if len(str_sp_vars) == 2:
             for func in range(len(list_positions)):
-                pass
-            
-        if len(str_sp_vars) == 1:
-            for func in range(len(list_positions)):
-                pass
-                                                            
+                S = 0
+                N = 0
+                E = 0
+                for len_list in range(len(list_positions[func])):
+                    if "S" in list_positions[func][len_list]:
+                        list_positions[func][len_list] = list_south[func][S]
+                        S += 1
+                    elif "N" in list_positions[func][len_list]:
+                        list_positions[func][len_list] = list_north[func][N]
+                        N += 1
+                    elif "E" in list_positions[func][len_list]:
+                        list_positions[func][len_list] = list_east[func][E]
+                        E += 1
+                                                                                    
         d_vars = []
     
         # Gerando lista de variáveis dependentes
@@ -226,22 +225,19 @@ class PDES:
                         if not(f'XX{k}{i}0' in d_vars):
                             d_vars.append(f'XX{k}{i}0')
             
-        print('Lista east:', list_east)
-        print('\n')
-        print('Lista 3: ', list_positions)
-        print('\n')
-        print('Lista 2:', list_eq)
+
+        flat_list_positions = []
         
-        return list_eq, d_vars
+        for list in list_positions:
+            flat_list_positions.extend(list)
+            
+        print(f'flat_list_positions: {flat_list_positions}')
+        
+        return list_positions, d_vars
 
 PDE1 = PDE.PDE('dC/dt = 0.1*d2C/dx2 + T', ['t', 'x'], ['C'])
 PDE2 = PDE.PDE('dT/dt = 0.1*d2T/dx2 ', ['t', 'x'], ['T'])
 
-
-# PDE2 = PDE.PDE('u_t = u_xx + v_yy', ['t', 'x', 'y'], ['u','v'])
 PDES1 = PDES([PDE2, PDE1], ['x', 'y'], ['T', 'C'])
 
-# print(PDES1.eqs)
-# print(PDES1.ivars)
-# print(PDES1.funcs)
-PDES1.df([5,5])
+print(PDES1.df([4,4]))
