@@ -11,18 +11,29 @@ def symbol_references(in_list):
     return slist
 
 # Função para resolver um sistema de EDOs utilizando o método de Runge-Kutta-Fehlberg de ordem 4 e 5
-def SERKF45(oldexpr, ivar, funcs, yn, x0, xn, n):
+def SERKF45(oldexpr, ivar, funcs, yn, x0, xn, n, n_funcs, sp_vars):
     olddvar = symbol_references(funcs)
     oldivar = symbol_references(ivar)
     expr = [parse_expr(oldexpr[i]) for i in range(len(oldexpr))]
-        
- 
+    
+    yns = list()
+    n_elements = len(yn)/n_funcs
+    final_list = [ [] for i in range(n_funcs)] 
+    if sp_vars ==2:
+        j = 0
+        for i in range(0,len(yn),int(n_elements)):
+            final_list[j].append(list(yn[i:i+int(n_elements)]))
+            j+=1
+    
+    
+    
+    
     allvar = list()
     allvar.append(oldivar)
-    print(f'expr:{expr}')
+    
     for i in range(len(olddvar)):
         allvar.append(olddvar[i])
-    print(f'allvar{allvar}')
+    
         
     # Inicialização do h e s como vetores de zeros
     h = sp.zeros(len(expr))
@@ -45,7 +56,7 @@ def SERKF45(oldexpr, ivar, funcs, yn, x0, xn, n):
     k5 = sp.zeros(len(expr))
     k6 = sp.zeros(len(expr))
 
-    # print(expr[0])
+    
     
     # Percorrendo as expressões e calculando os valores de k1, k2, k3, k4, k5 e k6 no intervalo [x0, xn]
     checkh = False
@@ -121,7 +132,18 @@ def SERKF45(oldexpr, ivar, funcs, yn, x0, xn, n):
             if diffy > tol:    
                 h[j] = s[j]*h[j]
                 checkh = True
-        
+        yns.append(yn)
         yn = yn4.copy()
-        print(yn)
-    return yn
+        if sp_vars == 2:
+            j = 0
+            for i in range(0,len(yn),int(n_elements)):
+                final_list[j].append(list(yn[i:i+int(n_elements)]))
+                j+=1
+        
+        
+            
+
+        
+        
+    
+    return yn, final_list

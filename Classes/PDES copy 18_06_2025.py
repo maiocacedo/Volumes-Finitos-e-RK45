@@ -186,7 +186,14 @@ class PDES:
         
         # * Substituindo centros na lista de posições
         elif len(str_sp_vars) == 2:
-        
+        #     for func in range(len(list_positions)): # para cada lista de posições
+        #         for jj in range(len(list_positions[func])): # para cada posição da lista
+        #             for i in range(1,n_part[0]-1): # para cada índice i da primeira variável de discretização
+        #                 for j in range(1,n_part[1]-1): # para cada índice j da segunda variável de discretização
+        #                     # Substituindo centros na lista de posições por suas respectivas equações
+        #                     print((n_part[0]-2)*(i-1)+j-1)
+        #                     list_positions[func][jj] = list_positions[func][jj].replace(f'Ce{func}{i}{j}', list_eq[func][(n_part[0]-2)*(i-1)+j-1])
+            
             for func in range(len(list_positions)):
                 C = 0
                 for i in range(len(list_positions[func])):
@@ -206,7 +213,8 @@ class PDES:
                     if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)
                         list_south[func].append(list_eq[func][j])
                         if func == 1:
-                            list_north[func].append(f'100 - XX1{n_part[1]-1}{k})') #! a
+                            list_north[func].append(f'0') #! a
+                            # list_north[func].append(f'2.78*(100 - XX1{n_part[1]-1}{k})') #! a
                             print(list_north[func][-1])
                             k+=1
                         else:
@@ -227,7 +235,11 @@ class PDES:
             
         
         elif len(str_sp_vars) == 1:
-           
+            # * Substituindo centros na lista de posições
+            # for func in range(len(list_positions)):
+            #     for jj in range(len(list_positions[func])):
+            #         for i in range(1,n_part[0]-1):
+            #             list_positions[func][jj] = list_positions[func][jj].replace(f'Ce{func}{i}0', list_eq[func][(n_part[0]-2)*(i-1)])
             for func in range(len(list_positions)):
                 C = 0
                 for i in range(len(list_positions[func])):
@@ -280,18 +292,28 @@ class PDES:
                 list_positions[func][-1] = list_east[func][0]
                 
                 list_positions[func][0] = str(inlet[func][0])
+                    
+                    # # Substitui East's
+                    # if "E" in list_positions[func][len_list]:
+                    #     list_positions[func][len_list] = list_east[func][E]
+                    #     E += 1
+                    # elif "W" in list_positions[func][len_list]:
+                    #     list_positions[func][len_list] = str(inlet[func][W])
+                    #     W += 1
+        
         
         d_vars = []
     
+
         if len(str_sp_vars) == 2:
             for func in range(len(list_positions)):
                 for i in range(0,n_part[0]):
                     for j in range(0,n_part[1]):
                             if not(f'XX{func}{i}{j}' in d_vars):
                                 d_vars.append(f'XX{func}{i}{j}')
-                            elif len(str_sp_vars) == 1:
-                                if not(f'XX{func}{i}0' in d_vars):
-                                            d_vars.append(f'XX{func}{i}0')
+        # elif len(str_sp_vars) == 1:
+        #     if not(f'XX{func}{i}0' in d_vars):
+        #                 d_vars.append(f'XX{func}{i}0')
             
 
         flat_list_positions = []
@@ -311,14 +333,14 @@ class PDES:
 #! Valores Iniciais
 
 PDE2 = PDE.PDE('dT/dt = 0.1*d2T/dx2 + 0.9*d2T/dy2', ['t', 'x', 'y'], ['T'])
-PDE1 = PDE.PDE('dC/dt = 0.1*d2C/dx2', ['t', 'x'], ['C'])
+PDE1 = PDE.PDE('dC/dt = 0.1*d2C/dx2', ['t', 'x', 'y'], ['C','T'])
+PDE3 = PDE.PDE('dD/dt = -15400/(8.34*T) * C**0.524', ['t'], ['D','T'])
+
+PDES1 = PDES([PDE1, PDE2, PDE3], ['x','y'], ['C','T','D'])
 
 
-PDES1 = PDES([PDE1, PDE2], ['x','y'], ['C','T'])
-
-
-disc_n=10
-resultado = PDES1.df([disc_n,disc_n], inlet=[[0 for i in range(disc_n)],[0 for i in range(disc_n)]], method="foward")
+disc_n=9
+resultado = PDES1.df([disc_n,disc_n], inlet=[[0 for i in range(disc_n)],[1 for i in range(disc_n)], [0 for i in range(disc_n)]], method="foward")
 print(resultado[1])
 initial_values = []
 for i in range(0,disc_n):
@@ -334,20 +356,37 @@ for i in range(disc_n,disc_n**2):
     else:
         initial_values.append(20)
 
+for i in range(0,disc_n):
+    initial_values.append(0)
+for i in range(disc_n,disc_n**2):
+    initial_values.append(0)
+# for i in range(0, disc_n[0]+1):
+#     initial_values.append(1)
+# for i in range(disc_n[0]+1,(disc_n[1]+1)*(disc_n[0]+1)):
+#     initial_values.append(1)
 
+# for i in range(0, disc_n[0]+1):
+#     initial_values.append(100)
+# for i in range(disc_n[0]+1,(disc_n[1]+1)*(disc_n[0]+1)):
+#     initial_values.append(20)    
 
+# initial_values.append(100)        
+# for i in range (1, disc_n):
+#     initial_values.append(80)
 
+# print(initial_values)
+# print(resultado[1])
 # print(SERKF45.SERKF45(resultado[0], ['t'], resultado[1], initial_values, 0, 0.1, 10,2,len(PDES1.sp_vars)))
-testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], initial_values, 0, 0.5, 100, 2, len(PDES1.sp_vars))
+testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], initial_values, 0, 0.5, 100, 3, len(PDES1.sp_vars))
 
 if len(PDES1.sp_vars) == 2:
     
-    vetor = np.array(testar[1][1][-1], dtype=float)  # Convertendo para um array NumPy
+    vetor = np.array(testar[1][0][-1], dtype=float)  # Convertendo para um array NumPy
     vetor = vetor.reshape((disc_n, disc_n), order='F')  # Reshape para matriz 2D (coluna maior que linha)
     plt.imshow(vetor, cmap='RdYlBu_r', interpolation='bilinear', extent=(0, 1, 0, 1), origin='lower')
     plt.show()
     
-    lista_vetores = testar[1][1]  
+    lista_vetores = testar[1][0]  
     n_frames = len(lista_vetores)
 
     # 1) Empilha e reshape para (n_frames, disc_n, disc_n)
