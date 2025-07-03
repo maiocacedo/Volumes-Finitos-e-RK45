@@ -1,14 +1,6 @@
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
-
-# Função para receber todos os simbolos e retornar uma lista com eles
-def symbol_references(in_list):
-    slist = []
-
-    for e in in_list:
-        globals()[e] = sp.Symbol(e)
-        slist.append(e)
-    return slist
+from FuncAux import symbol_references
 
 # Função para resolver um sistema de EDOs utilizando o método de Runge-Kutta-Fehlberg de ordem 4 e 5
 def SERKF45(oldexpr, ivar, funcs, yn, x0, xn, n, n_funcs, sp_vars):

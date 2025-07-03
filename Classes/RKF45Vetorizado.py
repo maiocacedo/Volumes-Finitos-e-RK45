@@ -1,16 +1,11 @@
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
 import cupy as cp
-
-
-def symbol_references(in_list):
-    slist = []
-    for e in in_list:
-        globals()[e] = sp.Symbol(e)
-        slist.append(e)
-    return slist
+import time
+from FuncAux import symbol_references
 
 def SERKF45_cuda(oldexpr, ivar, funcs, yn, x0, xn, n, nfuncs, sp_vars):
+    inicio = time.time()
     # 1) símbolos e lambdify para CuPy
     olddvar = symbol_references(funcs)
     oldivar = symbol_references(ivar)
@@ -20,12 +15,7 @@ def SERKF45_cuda(oldexpr, ivar, funcs, yn, x0, xn, n, nfuncs, sp_vars):
         exprs,
         modules=[cp]
     )
-    from inspect import signature
-    
-    print("len(funcs)       =", len(funcs))
-    print("len(initial_values) =", len(yn))
-    print("f_gpu signature  =", signature(f_gpu))
-    
+
     n_elements = len(yn) // nfuncs
     final_list = [ [] for i in range(nfuncs)] 
     
@@ -61,6 +51,7 @@ def SERKF45_cuda(oldexpr, ivar, funcs, yn, x0, xn, n, nfuncs, sp_vars):
 
     # 3) loop adaptativo
     for step in range(n):
+        inicio_loop = time.time()
         x_base = x0 + step * h
 
         k1 = h * get_deriv(x_base,                    y)
@@ -86,5 +77,9 @@ def SERKF45_cuda(oldexpr, ivar, funcs, yn, x0, xn, n, nfuncs, sp_vars):
         
         for j in range(nfuncs):
             final_list[j].append(y_np[j].tolist())
+        fim_loop = time.time()
+        print(f'Tempo do loop {step}: {fim_loop-inicio_loop}')
             
+    fim = time.time()
+    print(fim - inicio)
     return cp.asnumpy(y), final_list
