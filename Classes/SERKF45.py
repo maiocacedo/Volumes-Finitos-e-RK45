@@ -65,8 +65,8 @@ def SERKF45(oldexpr, ivar, funcs, yn, x0, xn, n, n_funcs, sp_vars):
             set1.update({ivar[0]:x0 + i*h[j]}) # Atualizando o valor de x
             for k in range(1, len(allvar)):
                 set1.update({allvar[k]:yn[k-1]}) # Atualizando os valores de y
-             
             k1[j] = h[j]*expr[j].subs(set1).evalf() # Calculando k1 subtituindo os valores de x e y 
+            
 
             
             # Calculando k2

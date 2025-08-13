@@ -1,6 +1,6 @@
 import PDE
 import SERKF45
-import RKF45Vetorizado as RK
+import ParallelSERKF45 as RK
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # habilita o 3D em matplotlib
@@ -60,15 +60,18 @@ class PDES:
                 for k in range(len(str_sp_vars)):
                     if k == 0: # se a variável de discretização for a primeira
                         for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_i_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_i+1_j - {xd_var[i]}_i_j)/ h{str_sp_vars[k]}')
+                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
+                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_i+1_j - {xd_var[i]}_ii_j)/ h{str_sp_vars[k]}')
                             
                     elif k == 1: # se a variável de discretização for a segunda
                         for i in range(len(xd_var)): 
                             
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i_j+1 - 2*{xd_var[i]}_i_j + {xd_var[i]}_i_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_i_j+1 - {xd_var[i]}_i_j)/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_i_j')
+                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
+                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)/ h{str_sp_vars[k]}')
+                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}_', f'ii*h{str_sp_vars[0]}')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}_', f'j*h{str_sp_vars[1]}')
+                            
         elif (method == "central"):            
             for j in range(len(eqrs)):
                 # Substituindo as derivadas parciais por diferenças finitas adiantadas
@@ -83,7 +86,7 @@ class PDES:
                             
                             eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i_j+1 - 2*{xd_var[i]}_i_j + {xd_var[i]}_i_j-1)/ h{str_sp_vars[k]} ** 2')
                             eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_i_j+1 - {xd_var[i]}_i_j)-({xd_var[i]}_i_j - {xd_var[i]}_i_j-1))/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_i_j')
+                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
         elif (method == "backward"):
             for j in range(len(eqrs)):
                 # Substituindo as derivadas parciais por diferenças finitas adiantadas
@@ -114,7 +117,7 @@ class PDES:
 
         # * Gerando lista de equações com indices parcialmente substituídos
         for j in range(len(eqrs)):
-            partial_list_eq.append([eqrs[j].replace('i+1', str(i+1)).replace('i-1', str(i-1)).replace('i-2', str(i-2)).replace('i+2', str(i+2)).replace('i',str(i)) for i in range(1,n_part[0]-1)])
+            partial_list_eq.append([eqrs[j].replace('i+1', str(i+1)).replace('i-1', str(i-1)).replace('i-2', str(i-2)).replace('i+2', str(i+2)).replace('ii',str(i)) for i in range(1,n_part[0]-1)])
         
 
         list_eq = []
@@ -207,7 +210,8 @@ class PDES:
                 for j in range(0, len(list_eq[func])): # para cada equação da lista
                     if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)
                         list_south[func].append(list_eq[func][j])
-                        list_north[func].append("0.0") #! a
+                        list_north[func].append(list_eq[func][j+n_part[1]-3]) #! a
+                        print(j+n_part[1]-3)
                             
                         
                     
@@ -302,7 +306,7 @@ class PDES:
                 flat_list_positions[i] = flat_list_positions[i].replace(f'h{str_sp_vars[_]}', str(1/n_part[_]))
         
         
-        
+        print(list_positions)
         return flat_list_positions, d_vars
 
 #! Valores Iniciais
@@ -310,10 +314,11 @@ class PDES:
 # PDE2 = PDE.PDE('dT/dt = 0.3*d2T/dx2 + 0.5*d2T/dy2', ['t', 'x', 'y'], ['T'])
 # PDE1 = PDE.PDE('dC/dt = 0.1*d2C/dx2', ['t', 'x'], ['C'])
 # PDE3 = PDE.PDE('dD/dt = 0.1*d2D/dx2', ['t', 'x'], ['D'])
+# **2 * x_ *(sin(x_)+cos(y_))+10*tanh(t)*(sin(x_)+cos(y_)+x_*cos(x_)-x_ *sin(y_))
 
-disc_n=11
+disc_n=5
 PDE1 = PDE.PDE('dC/dt = -0.01*(exp(-15400/(8.34*T)) * C**0.524)',  ['C'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'x*y')
-PDE2 = PDE.PDE('dT/dt = -0.1*d2T/dx2 - 0.2*d2T/dy2',  ['T'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'sin(x)*cos(y)')
+PDE2 = PDE.PDE('dT/dt = -dT/dx - dT/dy + 10*sech(t)**2 * x_ *(sin(x_)+cos(y_))+10*tanh(t)*(sin(x_)+cos(y_)+x_*cos(x_)-x_ *sin(y_))',  ['T'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], '10*x*(sin(x)+cos(y))')
 PDE3 = PDE.PDE('dD/dt = 0.01*exp(-15400/(8.34*T)) * C**0.524',  ['D'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'x*y')
 
 PDES1 = PDES([PDE2], ['x','y'], ['T'])
@@ -326,7 +331,8 @@ resultado = PDES1.df([disc_n,disc_n], inlet=[[0 for i in range(disc_n)]], method
 
 
 # print(SERKF45.SERKF45(resultado[0], ['t'], resultado[1], initial_values, 0, 0.1, 10,2,len(PDES1.sp_vars)))
-testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 100, 1, len(PDES1.sp_vars))
+# testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 100, 1, len(PDES1.sp_vars))
+testar = SERKF45.SERKF45(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 10, 1, len(PDES1.sp_vars))
 print(testar[1][0][-1])
 
 if len(PDES1.sp_vars) == 2:
