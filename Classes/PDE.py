@@ -40,7 +40,8 @@ class PDE:
         
         # Avalia a função na malha de pontos
         ic = f_ic(*mesh)
-        
+        if np.isscalar(ic):
+            ic = np.broadcast_to(ic, mesh[0].shape)
         return ic.flatten().tolist()  # array NumPy com os ic nos pontos da malha
 
 

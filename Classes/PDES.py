@@ -1,8 +1,9 @@
 import PDE
 import SERKF45
-import ParallelSERKF45 as RK
+import ParallelSERKF45_copy as RK
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D  # habilita o 3D em matplotlib
 from matplotlib.animation import FuncAnimation
 
@@ -33,7 +34,7 @@ class PDES:
         return nvars
 
 
-    def df(self, n_part, list_east = [], inlet = [], method="foward"):
+    def df(self, n_part, list_east = [], inlet = [], method="forward"):
        
         # Gerando lista das variáveis dependentes
         xd_var = self.xs(self.funcs)
@@ -54,7 +55,7 @@ class PDES:
 
         
       
-        if (method == "foward"):
+        if (method == "forward"):
             for j in range(len(eqrs)):
                 # Substituindo as derivadas parciais por diferenças finitas adiantadas
                 for k in range(len(str_sp_vars)):
@@ -78,32 +79,36 @@ class PDES:
                 for k in range(len(str_sp_vars)):
                     if k == 0: # se a variável de discretização for a primeira
                         for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_i_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_i+1_j - {xd_var[i]}_i_j)-({xd_var[i]}_i_j - {xd_var[i]}_i-1_j))/ h{str_sp_vars[k]}')
+                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
+                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_i+1_j - {xd_var[i]}_ii_j)-({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j))/ h{str_sp_vars[k]}')
                             
                     elif k == 1: # se a variável de discretização for a segunda
                         for i in range(len(xd_var)): 
                             
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i_j+1 - 2*{xd_var[i]}_i_j + {xd_var[i]}_i_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_i_j+1 - {xd_var[i]}_i_j)-({xd_var[i]}_i_j - {xd_var[i]}_i_j-1))/ h{str_sp_vars[k]}')
+                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
+                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)-({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1))/ h{str_sp_vars[k]}')
                             eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}_', f'ii*h{str_sp_vars[0]}')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}_', f'j*h{str_sp_vars[1]}')
         elif (method == "backward"):
             for j in range(len(eqrs)):
                 # Substituindo as derivadas parciais por diferenças finitas adiantadas
                 for k in range(len(str_sp_vars)):
                     if k == 0: # se a variável de discretização for a primeira
                         for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_i_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_i_j - {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]}')
+                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
+                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]}')
                             
                     elif k == 1: # se a variável de discretização for a segunda
                         for i in range(len(xd_var)): 
                             
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i_j+1 - 2*{xd_var[i]}_i_j + {xd_var[i]}_i_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_i_j - {xd_var[i]}_i_j-1)/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_i_j')
+                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
+                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]}')
+                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}_', f'ii*h{str_sp_vars[0]}')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}_', f'j*h{str_sp_vars[1]}')
         else:
-            raise ValueError("Método de discretização inválido. Use 'foward', 'central' ou 'backward'.")
+            raise ValueError("Método de discretização inválido. Use 'forward', 'central' ou 'backward'.")
         
         #* A partir daqui: Substituição dos indices i e j por seus valores correspondentes em eqrs:
         
@@ -131,7 +136,7 @@ class PDES:
             for j in range(len(partial_list_eq)): # para cada lista de equações discretizadas
                 for i in range(len(partial_list_eq[j])): # para cada equação da lista
                     for k in range(1,n_part[1]-1): # indice j da segunda variável de discretização
-                        list_eq[j].append(partial_list_eq[j][i].replace('j+1', str(k+1)).replace('j-1', str(k-1)).replace('j-2', str(k-2)).replace('j+2', str(k-2)).replace('j',str(k)))
+                        list_eq[j].append(partial_list_eq[j][i].replace('j+1', str(k+1)).replace('j-1', str(k-1)).replace('j-2', str(k-2)).replace('j+2', str(k+2)).replace('j',str(k)))
           
         
         # * Gerando lista de equações com indices totalmente substituídos para uma única variável de discretização
@@ -209,8 +214,10 @@ class PDES:
                 k = 1
                 for j in range(0, len(list_eq[func])): # para cada equação da lista
                     if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)
-                        list_south[func].append(list_eq[func][j])
-                        list_north[func].append(list_eq[func][j+n_part[1]-3]) #! a
+                        list_south[func].append(f'{list_eq[func][j]}+0.02*abs({list_eq[func][j]}-{list_eq[func][j+1]})')
+                        #list_south[func].append(list_eq[func][j])
+                        #list_north[func].append(list_eq[func][j+n_part[1]-3]) #! a
+                        list_north[func].append(f'{list_eq[func][j+n_part[1]-3]}-0.02*abs({list_eq[func][j+n_part[1]-4]}-{list_eq[func][j+n_part[1]-3]})') #! a
                         print(j+n_part[1]-3)
                             
                         
@@ -317,23 +324,27 @@ class PDES:
 # **2 * x_ *(sin(x_)+cos(y_))+10*tanh(t)*(sin(x_)+cos(y_)+x_*cos(x_)-x_ *sin(y_))
 
 disc_n=5
-PDE1 = PDE.PDE('dC/dt = -0.01*(exp(-15400/(8.34*T)) * C**0.524)',  ['C'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'x*y')
-PDE2 = PDE.PDE('dT/dt = -dT/dx - dT/dy + 10*sech(t)**2 * x_ *(sin(x_)+cos(y_))+10*tanh(t)*(sin(x_)+cos(y_)+x_*cos(x_)-x_ *sin(y_))',  ['T'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], '10*x*(sin(x)+cos(y))')
-PDE3 = PDE.PDE('dD/dt = 0.01*exp(-15400/(8.34*T)) * C**0.524',  ['D'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'x*y')
 
-PDES1 = PDES([PDE2], ['x','y'], ['T'])
+PDE1 = PDE.PDE('dT/dt = -dT/dx - dT/dy + 10*sech(t)**2 * x_ *(sin(x_)+cos(y_))+10*tanh(t)*(sin(x_)+cos(y_)+x_*cos(x_)-x_ *sin(y_))',  ['T'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], '0')
+
+
+PDES1 = PDES([PDE1], ['x','y'], ['T'])
 
 
 print(PDES1.ic)
-resultado = PDES1.df([disc_n,disc_n], inlet=[[0 for i in range(disc_n)]], method="foward")
+resultado = PDES1.df([disc_n,disc_n], inlet=[[0 for i in range(disc_n)]], method="backward")
 
 
 
 
 # print(SERKF45.SERKF45(resultado[0], ['t'], resultado[1], initial_values, 0, 0.1, 10,2,len(PDES1.sp_vars)))
-# testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 100, 1, len(PDES1.sp_vars))
-testar = SERKF45.SERKF45(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 10, 1, len(PDES1.sp_vars))
+testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 10, 1, len(PDES1.sp_vars))
+#testar = SERKF45.SERKF45(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 10, 1, len(PDES1.sp_vars))
 print(testar[1][0][-1])
+
+df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])
+
+df.to_excel("saida.xlsx", index=False)
 
 if len(PDES1.sp_vars) == 2:
     
