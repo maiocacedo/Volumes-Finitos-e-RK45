@@ -1,6 +1,7 @@
 import PDE
+from Disc import df
 import SERKF45
-import ParallelSERKF45_copy as RK
+import RKF45_novo as RK
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -34,288 +35,6 @@ class PDES:
         return nvars
 
 
-    def df(self, n_part, list_east = [], inlet = [], method="forward"):
-       
-        # Gerando lista das variáveis dependentes
-        xd_var = self.xs(self.funcs)
-
-        eqrs = [eq.split('=')[1] for eq in self.eqs]
-        str_sp_vars = ''
-
-        
-        # Gerando lista com todas as variáveis de discretização
-        for i in range(len(self.sp_vars)):
-            str_sp_vars = str_sp_vars + self.sp_vars[i]
-        
-       
-        # Adicionando as variáveis de discretização como indices das variáveis dependentes, para que possam ser identificadas
-        for j in range(len(eqrs)):
-            for i in range(len(xd_var)):
-                eqrs[j] = eqrs[j].replace(f'{str(self.funcs[i])}', f'{xd_var[i]}{str_sp_vars}')
-
-        
-      
-        if (method == "forward"):
-            for j in range(len(eqrs)):
-                # Substituindo as derivadas parciais por diferenças finitas adiantadas
-                for k in range(len(str_sp_vars)):
-                    if k == 0: # se a variável de discretização for a primeira
-                        for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_i+1_j - {xd_var[i]}_ii_j)/ h{str_sp_vars[k]}')
-                            
-                    elif k == 1: # se a variável de discretização for a segunda
-                        for i in range(len(xd_var)): 
-                            
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}_', f'ii*h{str_sp_vars[0]}')
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}_', f'j*h{str_sp_vars[1]}')
-                            
-        elif (method == "central"):            
-            for j in range(len(eqrs)):
-                # Substituindo as derivadas parciais por diferenças finitas adiantadas
-                for k in range(len(str_sp_vars)):
-                    if k == 0: # se a variável de discretização for a primeira
-                        for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_i+1_j - {xd_var[i]}_ii_j)-({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j))/ h{str_sp_vars[k]}')
-                            
-                    elif k == 1: # se a variável de discretização for a segunda
-                        for i in range(len(xd_var)): 
-                            
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)-({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1))/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}_', f'ii*h{str_sp_vars[0]}')
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}_', f'j*h{str_sp_vars[1]}')
-        elif (method == "backward"):
-            for j in range(len(eqrs)):
-                # Substituindo as derivadas parciais por diferenças finitas adiantadas
-                for k in range(len(str_sp_vars)):
-                    if k == 0: # se a variável de discretização for a primeira
-                        for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]}')
-                            
-                    elif k == 1: # se a variável de discretização for a segunda
-                        for i in range(len(xd_var)): 
-                            
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}_', f'ii*h{str_sp_vars[0]}')
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}_', f'j*h{str_sp_vars[1]}')
-        else:
-            raise ValueError("Método de discretização inválido. Use 'forward', 'central' ou 'backward'.")
-        
-        #* A partir daqui: Substituição dos indices i e j por seus valores correspondentes em eqrs:
-        
-        #*                 [[centros eq1][centros de eq2]]
-        #*                 [W0, W1, W2, W3, S1, ce0, ce1, N1, S2, ce2, ce3, N2, E0, E1, E2, E3]
-        
-        #*                 Generalizando para 2 variáveis de discretização.
-        
-
-        partial_list_eq = []
-
-        # * Gerando lista de equações com indices parcialmente substituídos
-        for j in range(len(eqrs)):
-            partial_list_eq.append([eqrs[j].replace('i+1', str(i+1)).replace('i-1', str(i-1)).replace('i-2', str(i-2)).replace('i+2', str(i+2)).replace('ii',str(i)) for i in range(1,n_part[0]-1)])
-        
-
-        list_eq = []
-        list_eq = [[] for i in range(len(partial_list_eq))]
-        
-        if len(str_sp_vars) == 3:
-            pass
-        
-        # * Gerando lista de equações com indices totalmente substituídos para duas variáveis de discretização
-        elif len(str_sp_vars) == 2:
-            for j in range(len(partial_list_eq)): # para cada lista de equações discretizadas
-                for i in range(len(partial_list_eq[j])): # para cada equação da lista
-                    for k in range(1,n_part[1]-1): # indice j da segunda variável de discretização
-                        list_eq[j].append(partial_list_eq[j][i].replace('j+1', str(k+1)).replace('j-1', str(k-1)).replace('j-2', str(k-2)).replace('j+2', str(k+2)).replace('j',str(k)))
-          
-        
-        # * Gerando lista de equações com indices totalmente substituídos para uma única variável de discretização
-        elif len(str_sp_vars) == 1:
-            for j in range(len(partial_list_eq)): # para cada lista de equações discretizadas
-                for i in range(len(partial_list_eq[j])): # para cada equação da lista
-                    list_eq[j].append(partial_list_eq[j][i].replace('j', str(0)))
-        
-        # * Gerando Lista de Posições para duas variáveis de discretização
-        list_positions = []
-        
-        if len(str_sp_vars) == 3:
-            pass
-        
-        elif len(str_sp_vars) == 2:
-            for func in range(len(self.funcs)):
-                list_aux = []
-                for i in range(n_part[0]):
-                    for j in range(n_part[1]):
-                        # Se a posição for da primeira parede do domínio (West)
-                        if i == 0:
-                            list_aux.append(f'W{func}_{i}_{j}') 
-                        # Se a posição for da última parede do domínio (East)
-                        elif i == n_part[0]-1:
-                            list_aux.append(f'E{func}_{i}_{j}')
-                        # Se a posição for da parede de baixo do domínio (South)
-                        elif j == 0:
-                            list_aux.append(f'S{func}_{i}_{j}')
-                        # Se a posição for da parede de cima do domínio (North)
-                        elif j == n_part[1]-1:
-                            list_aux.append(f'N{func}_{i}_{j}')
-                        # Se a posição for do centro do domínio (Center)
-                        else:
-                            list_aux.append(f'Ce{func}_{i}_{j}')
-                list_positions.append(list_aux)    
-        
-            
-        # * Gerando lista de posições para uma única variável de discretização
-        elif len(str_sp_vars) == 1:    
-            for func in range(len(self.funcs)):
-                list_aux = []
-                for i in range(0,n_part[0]):
-                    # Se a posição for da primeira parede do domínio (West)
-                    if i == 0:
-                        list_aux.append(f'W{func}{i}0')
-                
-                
-                    elif i == n_part[0]-1:
-                        # Se a posição for da última parede do domínio (East)
-                        list_aux.append(f'E{func}{i}0')
-                    else:
-                        # Se a posição for do centro do domínio (Center)
-                        list_aux.append(f'Ce{func}{i}0')
-                list_positions.append(list_aux)    
-                
-        if len(str_sp_vars) == 3:
-            pass
-        
-        # * Substituindo centros na lista de posições
-        elif len(str_sp_vars) == 2:
-        
-            for func in range(len(list_positions)):
-                C = 0
-                for i in range(len(list_positions[func])):
-                    if 'C' in list_positions[func][i]:
-                        list_positions[func][i] = list_eq[func][C]
-                        C+=1
-            
-            
-            
-            # * Gerando lista norte e sul
-            list_north = [[] for i in range(len(list_eq))]
-            list_south = [[] for i in range(len(list_eq))]
-            for func in range(len(list_eq)): # para cada lista de equações discretizadas
-                k = 1
-                for j in range(0, len(list_eq[func])): # para cada equação da lista
-                    if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)
-                        list_south[func].append(f'{list_eq[func][j]}+0.02*abs({list_eq[func][j]}-{list_eq[func][j+1]})')
-                        #list_south[func].append(list_eq[func][j])
-                        #list_north[func].append(list_eq[func][j+n_part[1]-3]) #! a
-                        list_north[func].append(f'{list_eq[func][j+n_part[1]-3]}-0.02*abs({list_eq[func][j+n_part[1]-4]}-{list_eq[func][j+n_part[1]-3]})') #! a
-                        print(j+n_part[1]-3)
-                            
-                        
-                    
-
-            
-            # * Gerando lista leste
-            if list_east == []:
-                list_east = [[] for i in range(len(list_eq))]
-                for func in range(len(list_eq)):
-                    list_east[func].append(list_south[func][-1])
-                    for i in range((n_part[1]-2)*(n_part[0]-2)-(n_part[1]-2), (n_part[1]-2)*(n_part[0]-2)): 
-                        list_east[func].append(list_eq[func][i])
-                    list_east[func].append(list_north[func][-1])        
-            
-        
-        elif len(str_sp_vars) == 1:
-           
-            for func in range(len(list_positions)):
-                C = 0
-                for i in range(len(list_positions[func])):
-                    if 'C' in list_positions[func][i]:
-                        list_positions[func][i] = list_eq[func][C]
-                        C+=1                        
-            # * Gerando lista leste
-            if list_east == []: # Verifica se a lista leste já foi criada pelo usuário            
-                list_east = [[] for i in range(len(list_eq))]
-                for func in range(len(list_positions)):              
-                    
-                    list_east[func].append(list_eq[func][-1])
-        
-        # * Substituindo as posições por equações
-        final_list_eq = []
-        
-        if len(str_sp_vars) == 3:
-            pass
-        
-        elif len(str_sp_vars) == 2:
-            for func in range(len(list_positions)):
-                # Contadores
-                S = 0
-                N = 0
-                E = 0
-                W = 0
-                for len_list in range(len(list_positions[func])):
-                    # Substitui South's
-                    if "S" in list_positions[func][len_list]:
-                        list_positions[func][len_list] = list_south[func][S]
-                        S += 1
-                    # Substitui North's
-                    elif "N" in list_positions[func][len_list]:
-                        list_positions[func][len_list] = list_north[func][N] # -T_ij + Tw
-                        N += 1
-                    # Substitui East's
-                    elif "E" in list_positions[func][len_list]:
-                        list_positions[func][len_list] = list_east[func][E]
-                        E += 1
-                    elif "W" in list_positions[func][len_list]:
-                        list_positions[func][len_list] = str(inlet[func][W])
-                        W += 1
-                              
-        elif len(str_sp_vars) == 1:
-            for func in range(len(list_positions)):
-                # Contadores
-                E = 0
-                W = 0
-                
-                list_positions[func][-1] = list_east[func][0]
-                
-                list_positions[func][0] = str(inlet[func][0])
-        
-        d_vars = []
-    
-        if len(str_sp_vars) == 2:
-            for func in range(len(list_positions)):
-                for i in range(0,n_part[0]):
-                    for j in range(0,n_part[1]):
-                            if not(f'XX{func}_{i}_{j}' in d_vars):
-                                d_vars.append(f'XX{func}_{i}_{j}')
-        elif len(str_sp_vars) == 1:
-            if not(f'XX{func}_{i}_0' in d_vars):
-                d_vars.append(f'XX{func}_{i}_0')
-            
-
-        flat_list_positions = []
-        
-        for list in list_positions:
-            flat_list_positions.extend(list)
-        
-        
-        for _ in range(len(str_sp_vars)):
-            for i in range(len(flat_list_positions)):
-                flat_list_positions[i] = flat_list_positions[i].replace(f'h{str_sp_vars[_]}', str(1/n_part[_]))
-        
-        
-        print(list_positions)
-        return flat_list_positions, d_vars
-
 #! Valores Iniciais
 
 # PDE2 = PDE.PDE('dT/dt = 0.3*d2T/dx2 + 0.5*d2T/dy2', ['t', 'x', 'y'], ['T'])
@@ -325,14 +44,30 @@ class PDES:
 
 disc_n=5
 
-PDE1 = PDE.PDE('dT/dt = -dT/dx - dT/dy + 10*sech(t)**2 * x_ *(sin(x_)+cos(y_))+10*tanh(t)*(sin(x_)+cos(y_)+x_*cos(x_)-x_ *sin(y_))',  ['T'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], '0')
+PDE1 = PDE.PDE('dF/dt = sinh(x+y) + d2F/dx2 + d2F/dy2 - 2*F - (d2G/dx2 + d2G/dy2) + 2*(G - t)',  
+                ['F'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], '0')
+PDE2 = PDE.PDE('dG/dt = d2G/dx2 + d2G/dy2 - 2*(G - t) - (d2F/dx2 + d2F/dy2 - 2*F) + 1 ',  
+                ['G'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'cosh(x-y)')
 
+resultado_analitico = []
+for i in range(disc_n):
+    for j in range(disc_n):
+        x_ = i/(disc_n-1)
+        y_ = j/(disc_n-1)
+        t = 1
+        F_analitico = t * np.sinh(x_ + y_)
+        G_analitico = t + np.cosh(x_ - y_)
+        resultado_analitico.append(F_analitico)
+        resultado_analitico.append(G_analitico)
 
-PDES1 = PDES([PDE1], ['x','y'], ['T'])
+print("Resultado Analítico:")
+print(resultado_analitico)
+
+PDES1 = PDES([PDE1,PDE2], ['x','y'], ['F','G'])
 
 
 print(PDES1.ic)
-resultado = PDES1.df([disc_n,disc_n], inlet=[[0 for i in range(disc_n)]], method="backward")
+resultado = df(PDES1, [disc_n,disc_n], inlet=[[f't * sinh({i/(disc_n-1)})' for i in range(disc_n)],[f't + cosh({-i/(disc_n-1)})' for i in range(disc_n)]], method="backward") #! erro forward
 
 
 
