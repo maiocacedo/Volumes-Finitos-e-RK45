@@ -30,7 +30,7 @@ import pandas as pd
 #       we re-define the minimal PDES class here, mirroring the user's version.
 #       (You can later refactor PDES.py to guard with `if __name__ == "__main__":`.)
 import PDE
-from Disc import df
+from Classes.Disc import df
 import SERKF45
 import RKF45_novo as RK
 

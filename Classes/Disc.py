@@ -1,6 +1,6 @@
-def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_bd = "neumann", east_bd = "neumann", 
+def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_bd = "neumann", east_bd = "neumann",
        north_func_bd = "0", south_func_bd = "0", east_func_bd = "0", north_alpha_bd = "0", south_alpha_bd = "0", east_alpha_bd = "0", north_beta_bd = "1", south_beta_bd = "1", east_beta_bd = "1" ):
-       
+
         # Gerando lista das variáveis dependentes
         xd_var = pdes.xs(pdes.funcs)
 
@@ -19,65 +19,160 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
             for i in range(len(xd_var)):
                 eqrs[j] = eqrs[j].replace(f'{str(pdes.funcs[i])}', f'{xd_var[i]}{str_sp_vars}')
 
-        
-      
         if (method == "forward"):
             for j in range(len(eqrs)):
                 # Substituindo as derivadas parciais por diferenças finitas adiantadas
                 for k in range(len(str_sp_vars)):
-                    if k == 0: # se a variável de discretização for a primeira
-                        for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_i+1_j - {xd_var[i]}_ii_j)/ h{str_sp_vars[k]}')
-                            
-                    elif k == 1: # se a variável de discretização for a segunda
-                        for i in range(len(xd_var)): 
-                            
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
-            for j in range(len(eqrs)):    
+                    if k == 0:  # primeira variável de discretização
+                        for i in range(len(xd_var)):
+                            eqrs[j] = eqrs[j].replace(
+                                f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2',
+                                f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{xd_var[i]}_ ** 2'
+                            )
+                            eqrs[j] = eqrs[j].replace(
+                                f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}',
+                                f'({xd_var[i]}_i+1_j - {xd_var[i]}_ii_j)/ h{xd_var[i]}_'
+                            )
+                    elif k == 1:  # segunda variável de discretização
+                        for i in range(len(xd_var)):
+                            eqrs[j] = eqrs[j].replace(
+                                f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2',
+                                f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_ ** 2'
+                            )
+                            eqrs[j] = eqrs[j].replace(
+                                f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}',
+                                f'({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)/ h{xd_var[i]}_'
+                            )
+                            eqrs[j] = eqrs[j].replace(
+                                f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j'
+                            )
+            for j in range(len(eqrs)):
                 eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}', f'ii * h{str_sp_vars[0]}_')
                 eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}', f'j * h{str_sp_vars[1]}_')
-                            
-        elif (method == "central"):            
+
+
+
+
+        elif (method == "central"):
+
             for j in range(len(eqrs)):
-                # Substituindo as derivadas parciais por diferenças finitas adiantadas
+
+                # Substituindo as derivadas parciais por diferenças finitas centrais
+
                 for k in range(len(str_sp_vars)):
-                    if k == 0: # se a variável de discretização for a primeira
-                        for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{str_sp_vars[k]} ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_i+1_j - {xd_var[i]}_ii_j)-({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j))/ h{str_sp_vars[k]}')
-                            
-                    elif k == 1: # se a variável de discretização for a segunda
-                        for i in range(len(xd_var)): 
-                            
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{str_sp_vars[k]} ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'(({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)-({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1))/ h{str_sp_vars[k]}')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
-            
+
+                    if k == 0:  # primeira variável de discretização
+
+                        for i in range(len(xd_var)):
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2',
+
+                                f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{xd_var[i]}_ ** 2'
+
+                            )
+
+                            # 1ª derivada central correta
+
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}',
+
+                                f'({xd_var[i]}_i+1_j - {xd_var[i]}_i-1_j)/(2* h{xd_var[i]}_)'
+
+                            )
+
+                    elif k == 1:  # segunda variável de discretização
+
+                        for i in range(len(xd_var)):
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2',
+
+                                f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_ ** 2'
+
+                            )
+
+                            # 1ª derivada central correta
+
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}',
+
+                                f'({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j-1)/(2* h{xd_var[i]}_)'
+
+                            )
+
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j'
+
+                            )
+
             for j in range(len(eqrs)):
                 eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}', f'ii * h{str_sp_vars[0]}_')
+
                 eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}', f'j * h{str_sp_vars[1]}_')
-                
+
+
         elif (method == "backward"):
+
             for j in range(len(eqrs)):
-                # Substituindo as derivadas parciais por diferenças finitas adiantadas
+
+                # Substituindo as derivadas parciais por diferenças finitas atrasadas
+
                 for k in range(len(str_sp_vars)):
-                    if k == 0: # se a variável de discretização for a primeira
-                        for i in range(len(xd_var)): 
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{xd_var[i]}_ ** 2') 
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j)/ h{xd_var[i]}_')
-                            
-                    elif k == 1: # se a variável de discretização for a segunda
-                        for i in range(len(xd_var)): 
-                            
-                            eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_ ** 2')
-                            eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+
+                    if k == 0:  # primeira variável de discretização
+
+                        for i in range(len(xd_var)):
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2',
+
+                                f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{xd_var[i]}_ ** 2'
+
+                            )
+
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}',
+
+                                f'({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j)/ h{xd_var[i]}_'
+
+                            )
+
+
+                    elif k == 1:  # segunda variável de discretização
+
+                        for i in range(len(xd_var)):
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2',
+
+                                f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_ ** 2'
+
+                            )
+
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}',
+
+                                f'({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_'
+
+                            )
+
+                            eqrs[j] = eqrs[j].replace(
+
+                                f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j'
+
+                            )
+
             for j in range(len(eqrs)):
                 eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}', f'ii * h{str_sp_vars[0]}_')
+
                 eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}', f'j * h{str_sp_vars[1]}_')
+
         else:
             raise ValueError("Método de discretização inválido. Use 'forward', 'central' ou 'backward'.")
         
@@ -197,21 +292,7 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                 list_north = neumann(north_func_bd, list_eq, 'north', n_part, xd_var)
             elif north_bd.lower() == 'robin':
                 list_north = robin(north_func_bd, list_eq, 'north', north_alpha_bd, north_beta_bd, n_part, xd_var)
-            
-            # for func in range(len(list_eq)): # para cada lista de equações discretizadas
-            #     for j in range(0, len(list_eq[func])): # para cada equação da lista
-            #         if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)
-                        
-                        # # list_south[func].append(f'{list_eq[func][j]}+0.02*abs({list_eq[func][j]}-{list_eq[func][j+1]})')
-                        # list_south[func].append(list_eq[func][j])
-                        # list_north[func].append(list_eq[func][j+n_part[1]-3]) #! a
-                        # # list_north[func].append(f'{list_eq[func][j+n_part[1]-3]}-0.02*abs({list_eq[func][j+n_part[1]-4]}-{list_eq[func][j+n_part[1]-3]})') #! a
-                        # #print(j+n_part[1]-3)
-                            
-                        
-                    
 
-            
             # * Gerando lista leste
             list_east = [[] for i in range(len(list_eq))]
             for func in range(len(list_eq)):
@@ -238,11 +319,7 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                         list_positions[func][i] = list_eq[func][C]
                         C+=1                        
             # * Gerando lista leste
-            if list_east == []: # Verifica se a lista leste já foi criada pelo usuário            
-                list_east = [[] for i in range(len(list_eq))]
-                for func in range(len(list_positions)):              
-                    list_east[func].append(list_eq[func][-1])
-        
+
         # * Substituindo as posições por equações
         final_list_eq = []
         
@@ -308,7 +385,7 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                 for j in range(len(xd_var)):
                     flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[j]}_', str(1/n_part[_]))
                     print(f'h{xd_var[j]}_')
-                
+
         print(xd_var)
         print(flat_list_positions)
         return flat_list_positions, d_vars
