@@ -110,9 +110,9 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                             )
 
             for j in range(len(eqrs)):
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}', f'ii * h{str_sp_vars[0]}_')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[0]}', f'ii * h{xd_var[0]}_')
 
-                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}', f'j * h{str_sp_vars[1]}_')
+                eqrs[j] = eqrs[j].replace(f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
 
 
         elif (method == "backward"):
@@ -273,8 +273,6 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                         list_positions[func][i] = list_eq[func][C]
                         C+=1
             
-            
-            
             # * Gerando lista norte e sul
             # list_north = [[] for i in range(len(list_eq))]
             # list_south = [[] for i in range(len(list_eq))]
@@ -282,14 +280,14 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
             if south_bd.lower() == 'dirichlet':
                 list_south = dirichlet(south_func_bd, list_eq, 'south', n_part)
             elif south_bd.lower() == 'neumann':
-                list_south = neumann(south_func_bd, list_eq, 'south', n_part, xd_var)
+                list_south = neumann(south_func_bd, list_eq, 'south', n_part, xd_var, str_sp_vars)
             elif south_bd.lower() == 'robin':
                 list_south = robin(south_func_bd, list_eq, 'south', south_alpha_bd, south_beta_bd, n_part, xd_var)
 
             if north_bd.lower() == 'dirichlet':
                 list_north = dirichlet(north_func_bd, list_eq, 'north', n_part)
             elif north_bd.lower() == 'neumann':
-                list_north = neumann(north_func_bd, list_eq, 'north', n_part, xd_var)
+                list_north = neumann(north_func_bd, list_eq, 'north', n_part, xd_var, str_sp_vars)
             elif north_bd.lower() == 'robin':
                 list_north = robin(north_func_bd, list_eq, 'north', north_alpha_bd, north_beta_bd, n_part, xd_var)
 
@@ -302,7 +300,7 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                 if east_bd.lower() == 'dirichlet':
                     centro = dirichlet(east_func_bd, list_eq, 'east', n_part)[func]
                 elif east_bd.lower() == 'neumann':
-                    centro = neumann(east_func_bd,list_eq, 'east', n_part, xd_var)[func]
+                    centro = neumann(east_func_bd,list_eq, 'east', n_part, xd_var, str_sp_vars)[func]
                 elif east_bd.lower() == 'robin':
                     centro = robin(east_func_bd, list_eq, 'east', east_alpha_bd, east_beta_bd, n_part, xd_var)[func]
                         
@@ -310,6 +308,7 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                     list_east[func].append(centro[i])       
                 list_east[func].append(list_north[func][-1])        
 
+                
         elif len(str_sp_vars) == 1:
            
             for func in range(len(list_positions)):
@@ -384,19 +383,19 @@ def df(pdes, n_part, inlet = [], method="forward", north_bd = "neumann", south_b
                 flat_list_positions[i] = flat_list_positions[i].replace(f'h{str_sp_vars[_]}_', str(1/n_part[_]))
                 for j in range(len(xd_var)):
                     flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[j]}_', str(1/n_part[_]))
-                    print(f'h{xd_var[j]}_')
-
-        print(xd_var)
-        print(flat_list_positions)
+                    
+        # print(flat_list_positions)
         return flat_list_positions, d_vars
 
 
-def dirichlet(bd_func, list_eq, bd, n_part):
+def dirichlet(bd_func, list_eq, bd, n_part, str_sp_vars = ''):
     if bd.lower() == 'north':
         list_north = [[] for i in range(len(list_eq))]
         for func in range(len(list_eq)): # para cada lista de equações discretizadas
             for j in range(n_part[func]): # para cada equação da lista
                 list_north[func].append(bd_func)
+                list_north[func][-1] = list_north[func][-1].replace(f'{str_sp_vars[0]}', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{str_sp_vars[0]}_')
+                list_north[func][-1] = list_north[func][-1].replace(f'{str_sp_vars[1]}', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{str_sp_vars[1]}_')
         return list_north        
             
     elif bd.lower() == 'south':
@@ -404,6 +403,8 @@ def dirichlet(bd_func, list_eq, bd, n_part):
         for func in range(len(list_eq)): # para cada lista de equações discretizadas
             for j in range(n_part[func]): # para cada equação da lista
                 list_south[func].append(bd_func)
+                list_south[func][-1] = list_south[func][-1].replace(f'{str_sp_vars[0]}', f'{int(j / (n_part[1]-2))} * h{str_sp_vars[0]}_')
+                list_south[func][-1] = list_south[func][-1].replace(f'{str_sp_vars[1]}', f'{int(j / (n_part[1]-2))} * h{str_sp_vars[1]}_')
         return list_south
     
     
@@ -412,6 +413,8 @@ def dirichlet(bd_func, list_eq, bd, n_part):
         for func in range(len(list_eq)): # para cada lista de equações discretizadas
             for j in range(n_part[func]): # para cada equação da lista
                 list_east[func].append(bd_func)
+                list_east[func][-1] = list_east[func][-1].replace(f'{str_sp_vars[0]}', f'{i} * h{str_sp_vars[0]}_')
+                list_east[func][-1] = list_east[func][-1].replace(f'{str_sp_vars[1]}', f'{i} * h{str_sp_vars[1]}_')
         return list_east
     
     else:
@@ -419,14 +422,15 @@ def dirichlet(bd_func, list_eq, bd, n_part):
         return []
 
 
-def robin(bd_func, list_eq, bd, alpha, beta, n_part, xd_var):
+def robin(bd_func, list_eq, bd, alpha, beta, n_part, xd_var, str_sp_vars = ''):
     if bd.lower() == 'north':
         list_north = [[] for i in range(len(list_eq))]
         for func in range(len(list_eq)): # para cada lista de equações discretizadas
             for j in range(0, len(list_eq[func])): # para cada equação da lista
                 if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)          
                     list_north[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][j+n_part[1]-3]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
-        
+                    list_north[func][-1] = list_north[func][-1].replace(f'{str_sp_vars[0]}', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{str_sp_vars[0]}_')
+                    list_north[func][-1] = list_north[func][-1].replace(f'{str_sp_vars[1]}', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{str_sp_vars[1]}_')
         return list_north        
             
     elif bd.lower() == 'south':
@@ -434,8 +438,9 @@ def robin(bd_func, list_eq, bd, alpha, beta, n_part, xd_var):
         for func in range(len(list_eq)): # para cada lista de equações discretizadas
             for j in range(0, len(list_eq[func])): # para cada equação da lista
                 if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)  
-                      list_south[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][j]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
-          
+                    list_south[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][j]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
+                    list_south[func][-1] = list_south[func][-1].replace(f'{str_sp_vars[0]}', f'{int(j / (n_part[1]-2))} * h{str_sp_vars[0]}_')
+                    list_south[func][-1] = list_south[func][-1].replace(f'{str_sp_vars[1]}', f'{int(j / (n_part[1]-2))} * h{str_sp_vars[1]}_')
         return list_south
     
     
@@ -445,7 +450,8 @@ def robin(bd_func, list_eq, bd, alpha, beta, n_part, xd_var):
             
             for i in range((n_part[1]-2)*(n_part[0]-2)-(n_part[1]-2), (n_part[1]-2)*(n_part[0]-2)): 
                 list_east[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][i]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
-
+                list_east[func][-1] = list_east[func][-1].replace(f'{str_sp_vars[0]}', f'{i} * h{str_sp_vars[0]}_')
+                list_east[func][-1] = list_east[func][-1].replace(f'{str_sp_vars[1]}', f'{i} * h{str_sp_vars[1]}_')
             
         return list_east
     
@@ -454,7 +460,7 @@ def robin(bd_func, list_eq, bd, alpha, beta, n_part, xd_var):
         return []
 
 
-def neumann(bd_func, list_eq, bd, n_part, xd_var):
+def neumann(bd_func, list_eq, bd, n_part, xd_var, str_sp_vars = ''):
     
     if bd.lower() == 'north':
         list_north = [[] for i in range(len(list_eq))]
@@ -462,16 +468,21 @@ def neumann(bd_func, list_eq, bd, n_part, xd_var):
             for j in range(0, len(list_eq[func])): # para cada equação da lista
                 if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)          
                     list_north[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][j+n_part[1]-3]}')
-                    
-        return list_north        
-            
+
+                    list_north[func][-1] = list_north[func][-1].replace(f'{str_sp_vars[0]}', f'{int(j / (n_part[0]-2)+n_part[0]-3)} * h{xd_var[0]}_')
+                    list_north[func][-1] = list_north[func][-1].replace(f'{str_sp_vars[1]}', f'{n_part[1]-1} * h{xd_var[0]}_')
+
+        return list_north
+
     elif bd.lower() == 'south':
         list_south = [[] for i in range(len(list_eq))]
         for func in range(len(list_eq)): # para cada lista de equações discretizadas
             for j in range(0, len(list_eq[func])): # para cada equação da lista
                 if j % (n_part[1]-2) == 0: # se o índice j for múltiplo de (n_part[1]-2)  
-                      list_south[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][j]}')
-                      
+                    list_south[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][j]}')
+                    list_south[func][-1] = list_south[func][-1].replace(f'{str_sp_vars[0]}', f'{int(j / (n_part[0]-2))} * h{xd_var[0]}_')
+                    list_south[func][-1] = list_south[func][-1].replace(f'{str_sp_vars[1]}', f'0 * h{xd_var[0]}_')
+
         return list_south
     
     
@@ -481,6 +492,9 @@ def neumann(bd_func, list_eq, bd, n_part, xd_var):
             
             for i in range((n_part[1]-2)*(n_part[0]-2)-(n_part[1]-2), (n_part[1]-2)*(n_part[0]-2)): 
                 list_east[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][i]}')
+                list_east[func][-1] = list_east[func][-1].replace(f'{str_sp_vars[0]}', f'{n_part[0]-1} * h{xd_var[0]}_')
+                list_east[func][-1] = list_east[func][-1].replace(f'{str_sp_vars[1]}', f'{i} * h{xd_var[0]}_')
+
             
             
         return list_east

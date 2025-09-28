@@ -30,7 +30,7 @@ import pandas as pd
 #       we re-define the minimal PDES class here, mirroring the user's version.
 #       (You can later refactor PDES.py to guard with `if __name__ == "__main__":`.)
 import PDE
-from Classes.Disc import df
+from Disc import df
 import SERKF45
 import RKF45_novo as RK
 
@@ -281,22 +281,15 @@ def main(page: ft.Page):
     default_dom_y = "0,1"
     default_ic = "0"
 
-    # Controls
-    disc_n = ft.TextField(label="disc_n (malha por eixo)", value=str(default_disc_n), width=200)
-    eq = ft.TextField(label="Equação PDE (texto)", value=default_eq, multiline=True, min_lines=3, max_lines=6, expand=True)
-    funcs = ft.TextField(label="Funções (lista)", value=default_funcs, hint_text="ex.: T ou C,D", width=260)
-    sp_vars = ft.TextField(label="Variáveis espaciais (lista)", value=default_sp_vars, hint_text="ex.: x,y", width=260)
-    domx = ft.TextField(label="Domínio x: a,b", value=default_dom_x, width=200)
-    domy = ft.TextField(label="Domínio y: a,b", value=default_dom_y, width=200)
-    ic = ft.TextField(label="Condição inicial (texto)", value=default_ic, width=200)
+    def on_change_text(e):
+        funcs_list = parse_list_csv(e.control.value)
+        if len(funcs_list) == 0:
+            e.control.error_text = "Esse campo não pode estar vazio."
+        else:
+            print(len(funcs_list))
+            e.control.error_text = None
+        e.control.update()
 
-    method = ft.Dropdown(
-        label="Esquema de discretização (Disc.df)",
-        options=[ft.dropdown.Option("backward"), ft.dropdown.Option("forward"), ft.dropdown.Option("central")],
-        value="backward",
-        width=200,
-    )
-    
     def onchange_east_bc(e):
         hint_str = ""
         selected = e.control.value
@@ -341,6 +334,114 @@ def main(page: ft.Page):
         south_text.hint_text = hint_str
         page.update()
         
+    east_text = ft.TextField(label="", hint_text="∂u/∂n(X,t) = h(X,t)", width=250)
+    north_text = ft.TextField(label="", hint_text="∂u/∂n(X,t) = h(X,t)", width=250)
+    south_text = ft.TextField(label="", hint_text="∂u/∂n(X,t) = h(X,t)", width=250)
+    north_alpha_text = ft.TextField(label="", hint_text="α(X)", width=250, visible=False)
+    north_beta_text = ft.TextField(label="", hint_text="β(X)", width=250, visible=False)
+    south_alpha_text = ft.TextField(label="", hint_text="α(X)", width=250, visible=False)
+    south_beta_text = ft.TextField(label="", hint_text="β(X)", width=250, visible=False)
+    east_alpha_text = ft.TextField(label="", hint_text="α(X)", width=250, visible=False)
+    east_beta_text = ft.TextField(label="", hint_text="β(X)", width=250, visible=False)
+    
+    combo_box_list_north = [ft.Dropdown(
+                                                label="Condição de contorno norte",
+                                                options=[ft.dropdown.Option("Dirichlet"), ft.dropdown.Option("Neumann"), ft.dropdown.Option("Robin")],
+                                                value="Neumann",
+                                                width=250,
+                                                on_change=onchange_north_bc,
+                                            ), north_text, north_alpha_text, north_beta_text]
+    combo_box_list_south = [ft.Dropdown(
+                                                label="Condição de contorno sul",
+                                                options=[ft.dropdown.Option("Dirichlet"), ft.dropdown.Option("Neumann"), ft.dropdown.Option("Robin")],
+                                                value="Neumann",
+                                                width=250,
+                                                on_change=onchange_south_bc,
+                                            ), south_text, south_alpha_text, south_beta_text]
+    combo_box_list_east = [ft.Dropdown(
+                                                label="Condição de contorno leste",
+                                                options=[ft.dropdown.Option("Dirichlet"), ft.dropdown.Option("Neumann"), ft.dropdown.Option("Robin")],
+                                                value="Neumann",
+                                                width=250,
+                                                on_change=onchange_east_bc,
+                                            ), east_text, east_alpha_text, east_beta_text]
+    
+    dropdown_column_north = ft.Column()
+    dropdown_column_south = ft.Column()
+    dropdown_column_east = ft.Column()
+
+    dropdown_column_north.controls = combo_box_list_north
+    dropdown_column_south.controls = combo_box_list_south
+    dropdown_column_east.controls = combo_box_list_east
+
+    def on_change_eqs(e):
+        eqs_list = parse_list_csv(e.control.value)
+        if len(eqs_list) == 0:
+            e.control.error_text = "Esse campo não pode estar vazio."
+        else:
+            while len(eqs_list) > len(combo_box_list_north)-3:
+                combo_box_list_north.insert(-5, ft.Dropdown(
+                                                label=f"Condição de contorno norte {eqs_list[len(combo_box_list_north)-3]}",
+                                                options=[ft.dropdown.Option("Dirichlet"), ft.dropdown.Option("Neumann"), ft.dropdown.Option("Robin")],
+                                                value="Neumann",
+                                                width=250,
+                                                on_change=onchange_north_bc,
+                                            ))
+                print(len(combo_box_list_north))
+            while len(eqs_list) > len(combo_box_list_south)-3:
+                combo_box_list_south.insert(-5, ft.Dropdown(
+                                                label=f"Condição de contorno sul {eqs_list[len(combo_box_list_south)-3]}",
+                                                options=[ft.dropdown.Option("Dirichlet"), ft.dropdown.Option("Neumann"), ft.dropdown.Option("Robin")],
+                                                value="Neumann",
+                                                width=250,
+                                                on_change=onchange_south_bc,
+                                            ))
+            while len(eqs_list) > len(combo_box_list_east)-3:
+                combo_box_list_east.insert(-5, ft.Dropdown(
+                                                label=f"Condição de contorno leste {eqs_list[len(combo_box_list_east)-3]}",
+                                                options=[ft.dropdown.Option("Dirichlet"), ft.dropdown.Option("Neumann"), ft.dropdown.Option("Robin")],
+                                                value="Neumann",
+                                                width=250,
+                                                on_change=onchange_east_bc,
+                                            ))
+            while len(eqs_list) < len(combo_box_list_north)-3:
+                combo_box_list_north.pop(-5)
+                print(len(combo_box_list_north))
+            while len(eqs_list) < len(combo_box_list_south)-3:
+                combo_box_list_south.pop(-5)
+                print(len(combo_box_list_south))    
+            while len(eqs_list) < len(combo_box_list_east)-3:
+                combo_box_list_east.pop(-5)
+
+            dropdown_column_north.controls = combo_box_list_north
+            dropdown_column_south.controls = combo_box_list_south
+            dropdown_column_east.controls = combo_box_list_east
+
+            # print(len(eqs_list))
+            e.control.error_text = None
+        page.update()
+        e.control.update()
+
+
+    
+    
+    # Controls
+    disc_n = ft.TextField(label="disc_n (malha por eixo)", value=str(default_disc_n), width=200)
+    eq = ft.TextField(label="Equação PDE (texto)", value=default_eq, multiline=True, min_lines=3, max_lines=6, expand=True, on_change=on_change_eqs)
+    funcs = ft.TextField(label="Funções (lista)", value=default_funcs, hint_text="ex.: T ou C,D", width=260, on_change=on_change_text)
+    sp_vars = ft.TextField(label="Variáveis espaciais (lista)", value=default_sp_vars, hint_text="ex.: x,y", width=260, on_change=on_change_text)
+    domx = ft.TextField(label="Domínio x: a,b", value=default_dom_x, width=200)
+    domy = ft.TextField(label="Domínio y: a,b", value=default_dom_y, width=200)
+    ic = ft.TextField(label="Condição inicial (texto)", value=default_ic, width=200, on_change=on_change_text)
+
+    method = ft.Dropdown(
+        label="Esquema de discretização (Disc.df)",
+        options=[ft.dropdown.Option("backward"), ft.dropdown.Option("forward"), ft.dropdown.Option("central")],
+        value="backward",
+        width=200,
+    )
+    
+    
     east_bc = ft.Dropdown(
         label="Condição de contorno leste",
         options=[ft.dropdown.Option("Dirichlet"), ft.dropdown.Option("Neumann"), ft.dropdown.Option("Robin")],
@@ -363,15 +464,7 @@ def main(page: ft.Page):
         on_change=onchange_south_bc,
     )
     
-    east_text = ft.TextField(label="", hint_text="∂u/∂n(X,t) = h(X,t)", width=250)
-    north_text = ft.TextField(label="", hint_text="∂u/∂n(X,t) = h(X,t)", width=250)
-    south_text = ft.TextField(label="", hint_text="∂u/∂n(X,t) = h(X,t)", width=250)
-    north_alpha_text = ft.TextField(label="", hint_text="α(X)", width=250, visible=False)
-    north_beta_text = ft.TextField(label="", hint_text="β(X)", width=250, visible=False)
-    south_alpha_text = ft.TextField(label="", hint_text="α(X)", width=250, visible=False)
-    south_beta_text = ft.TextField(label="", hint_text="β(X)", width=250, visible=False)
-    east_alpha_text = ft.TextField(label="", hint_text="α(X)", width=250, visible=False)
-    east_beta_text = ft.TextField(label="", hint_text="β(X)", width=250, visible=False)
+
     
     t0 = ft.TextField(label="t0", value="0", width=120)
     t1 = ft.TextField(label="t1", value="1", width=120)
@@ -524,26 +617,10 @@ def main(page: ft.Page):
         ]),
         ft.Divider(),
         ft.Row([
-            ft.Column([
-            ft.Container(east_bc, col={'xs': 4, 'md': 2, 'lg': 2}),
-            ft.Container(east_text,col={'xs': 4, 'md': 2, 'lg': 2}),
-            ft.Container(east_alpha_text),
-            ft.Container(east_beta_text),
-            
-            ], alignment = ft.MainAxisAlignment.START),
-            ft.Column([
-                ft.Container(south_bc),
-                ft.Container(south_text),
-                ft.Container(south_alpha_text),
-                ft.Container(south_beta_text),
+            dropdown_column_north,
+            dropdown_column_south,
+            dropdown_column_east,
             ],  alignment = ft.MainAxisAlignment.START),
-            ft.Column([
-                ft.Container(north_bc),
-                ft.Container(north_text),
-                ft.Container(north_alpha_text),
-                ft.Container(north_beta_text),
-            ],  alignment = ft.MainAxisAlignment.START)
-        ], alignment = ft.CrossAxisAlignment.START), 
         ft.Divider(),
         ft.ResponsiveRow([
             ft.Container(use_cuda, col={'xs': 12, 'md': 4, 'lg': 3}),

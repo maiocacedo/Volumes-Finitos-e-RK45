@@ -14,8 +14,8 @@ from matplotlib.animation import FuncAnimation
 
 disc_n=11
 
-PDE1 = PDE.PDE('dF/dt = d2F/dx2 + d2F/dy2 + 1',  
-                ['F'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'x + y')
+PDE1 = PDE.PDE('dF/dt = d2F/dx2 + d2F/dy2 + F + sin(x) + cos(y)',  
+                ['F'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'sin(x) + 2 * cos(y)')
 
 
 
@@ -26,7 +26,7 @@ for i in range(disc_n):
         x_ = i/(disc_n-1)
         y_ = j/(disc_n-1)
         t = 1
-        F_analitico = t + x_ + y_
+        F_analitico = float((t+1)*np.sin(x_) + (t+2)*np.cos(y_))
         # G_analitico = t + np.cosh(x_ - y_)
         resultado_analitico.append(F_analitico)
         # resultado_analitico.append(G_analitico)
@@ -38,10 +38,10 @@ print(resultado_analitico)
 PDES1 = PDES([PDE1], ['x','y'], ['F'])
 
 resultado = df(PDES1, [disc_n,disc_n], 
-               inlet=[[f't + ({i/(disc_n-1)})' for i in range(0,disc_n)]], 
+               inlet=[[f'(t + 2) * {np.cos(i/(disc_n-1))}' for i in range(0,disc_n)]], 
                method="central",
                north_bd="Neumann", south_bd="Neumann",east_bd="Neumann",
-               north_func_bd='1', south_func_bd='1', east_func_bd='1'
+               north_func_bd='-(t+2) * sin(1)', south_func_bd='-(t+2) * sin(0)', east_func_bd='(t+1) * cos(1)'
                )
 
 # print(SERKF45.SERKF45(resultado[0], ['t'], resultado[1], initial_values, 0, 0.1, 10,2,len(PDES1.sp_vars)))
@@ -62,6 +62,9 @@ print(erro_relativo)
 print("Erro Médio Absoluto:")
 erro_medio_absoluto = np.mean(erro_absoluto)
 print(erro_medio_absoluto)
+
+
+
 
 df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])
 
