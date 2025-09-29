@@ -206,7 +206,7 @@ def SERKF45_cuda(oldexpr, ivar, funcs, yn, x0, xn, n, n_funcs, sp_vars):
                 raise RuntimeError("Muitas repetições de passo; verifique tolerância/dinâmica.")
             continue  # repete o passo (i não avança)
         else:
-            # print(i)
+            print(i)
             retries = 0
             i += 1
 
