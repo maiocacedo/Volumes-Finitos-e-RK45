@@ -1,15 +1,18 @@
 from PDES import PDES
 import PDE
 from Disc_tokenfix import df
+import SERKF45
 import RKF45_novo as RK
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.animation import FuncAnimation
+import time
 
+start_time_df = time.time()
 # ! Valores Iniciais
 
-disc_n = 51
+disc_n = 11
 
 PDE1 = PDE.PDE('dF/dt = d2F/dx2 + d2F/dy2 + F + sin(x) + cos(y)',
                ['F'], ['x', 'y'], [disc_n, disc_n], [(0, 1), (0, 1)], 'sin(x) + 2 * cos(y)')
@@ -35,15 +38,30 @@ resultado = df(
     PDES1, [disc_n, disc_n],
     west_func_bd="(t+1)*sin(0)+(t+2)*cos(y)",  # x=0
     west_bd="Dirichlet",
-    method="central",
-    north_bd="Neumann", south_bd="Robin", east_bd="Dirichlet",  # west via inlet
+    method="backward",
+    north_bd="Dirichlet", south_bd="Dirichlet", east_bd="Dirichlet",  # west via inlet
     north_func_bd='(t+1)*sin(x)+(t+2)*cos(1)',   # y=1
-    south_func_bd='(t+1)*sin(x)+(t+2)*cos(0)',   # y=0
-    south_alpha_bd='1', south_beta_bd='1',            
+    south_func_bd='(t+1)*sin(x)+(t+2)*cos(0)',   # y=0          
     east_func_bd='(t+1)*sin(1)+(t+2)*cos(y)'     # x=1
 )
+exec_time_df = time.time() - start_time_df
 
-testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 500, 1, len(PDES1.sp_vars))
+start_time_rk_cuda = time.time()
+testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 400, 1, len(PDES1.sp_vars))
+exec_time_rk_cuda = time.time() - start_time_rk_cuda
+
+exec_time_total = time.time() - start_time_df
+
+start_time_rk = time.time()
+# testar = SERKF45.SERKF45(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 0.1, 400, 1, len(PDES1.sp_vars))
+exec_time_rk = time.time() - start_time_rk
+
+
+print(f"Tempo de execução df: {exec_time_df:.2f} segundos")
+print(f"Tempo de execução RK: {exec_time_rk:.2f} segundos")
+print(f"Tempo de execução RK CUDA: {exec_time_rk_cuda:.2f} segundos")
+print(f"Tempo de execução total: {exec_time_total:.2f} segundos")
+
 
 print("Resultado Numérico:")
 print(testar[1][0][-1])
@@ -80,6 +98,7 @@ erro_abs = np.abs(F_num_vec - F_anal_vec)
 erro_rel = erro_abs / np.maximum(np.abs(F_anal_vec), 1e-15) * 100
 print("||erro||_inf:", erro_abs.max())
 print("MAE:", erro_abs.mean())
+print("R^2", 1 - np.sum(erro_abs**2) / np.sum((F_anal_vec - np.mean(F_anal_vec))**2))
 
 df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])
 
@@ -135,7 +154,8 @@ if len(PDES1.sp_vars) == 2:
     ani = FuncAnimation(
         fig, update,
         frames=n_frames,
-        interval=200,  # ms entre frames
+        interval=20,  # ms entre frames
+        repeat=False,
         blit=False  # blit não funciona bem em 3D
     )
 

@@ -40,7 +40,9 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                         for i in range(len(xd_var)):
                             eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_ ** 2')
                             eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j)/ h{xd_var[i]}_')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                for i in range(len(xd_var)):
+                    eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                
             for j in range(len(eqrs)):
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[0]}', f'ii * h{xd_var[0]}_')
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
@@ -56,7 +58,9 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                         for i in range(len(xd_var)):
                             eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_ ** 2')
                             eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j+1 - {xd_var[i]}_ii_j-1)/(2* h{xd_var[i]}_)')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                for i in range(len(xd_var)):
+                    eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                
             for j in range(len(eqrs)):
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[0]}', f'ii * h{xd_var[0]}_')
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
@@ -72,10 +76,13 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                         for i in range(len(xd_var)):
                             eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_ii_j+1 - 2*{xd_var[i]}_ii_j + {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_ ** 2')
                             eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_ii_j-1)/ h{xd_var[i]}_')
-                            eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                for i in range(len(xd_var)):
+                        eqrs[j] = eqrs[j].replace(f'{xd_var[i]}{str_sp_vars}', f'{xd_var[i]}_ii_j')
+                
             for j in range(len(eqrs)):
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[0]}', f'ii * h{xd_var[0]}_')
-                eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
+                if len(str_sp_vars) == 2:
+                    eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
         else:
             raise ValueError("Método de discretização inválido. Use 'forward', 'central' ou 'backward'.")
 
@@ -101,7 +108,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                 list_aux = []
                 for i in range(n_part[0]):
                     for j in range(n_part[1]):
-                        if i == 0:                 list_aux.append(f'W{func}_{i}_{j}') 
+                        if i == 0:                 list_aux.append(f'W{func}_{i}_{j}')
                         elif i == n_part[0]-1:     list_aux.append(f'E{func}_{i}_{j}')
                         elif j == 0:               list_aux.append(f'S{func}_{i}_{j}')
                         elif j == n_part[1]-1:     list_aux.append(f'N{func}_{i}_{j}')
@@ -112,9 +119,15 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
             for func in range(len(pdes.funcs)):
                 list_aux = []
                 for i in range(0,n_part[0]):
-                    if i == 0:                  list_aux.append(f'W{func}{i}0')
-                    elif i == n_part[0]-1:      list_aux.append(f'E{func}{i}0')
-                    else:                       list_aux.append(f'Ce{func}{i}0')
+                    if i == 0:
+                        if west_bd.lower() == 'dirichlet': list_aux.append(dirichlet(west_func_bd, list_eq, 'west', n_part, xd_var, str_sp_vars)[func][0])
+                        elif west_bd.lower() == 'neumann': list_aux.append(neumann(west_func_bd, list_eq, 'west', n_part, xd_var, str_sp_vars)[func][0])
+                    elif i == n_part[0]-1:      
+                        if east_bd.lower() == 'dirichlet': list_aux.append(dirichlet(east_func_bd, list_eq, 'east', n_part, xd_var, str_sp_vars)[func][0])
+                        elif east_bd.lower() == 'neumann': list_aux.append(neumann(east_func_bd, list_eq, 'east', n_part, xd_var, str_sp_vars)[func][0])
+                        elif east_bd.lower() == 'robin': list_aux.append(robin(east_func_bd, list_eq, 'east', east_alpha_bd, east_beta_bd, n_part, xd_var, str_sp_vars)[func][0])
+                    else: 
+                        list_aux.append(f'Ce{func}{i}0')
                 list_positions.append(list_aux)
 
         if len(str_sp_vars) == 2:
@@ -129,14 +142,14 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
             elif south_bd.lower() == 'neumann':
                 list_south = neumann(south_func_bd, list_eq, 'south', n_part, xd_var, str_sp_vars)
             elif south_bd.lower() == 'robin':
-                list_south = robin(south_func_bd, list_eq, 'south', south_alpha_bd, south_beta_bd, n_part, xd_var, str_sp_vars)
+                list_south = robin(south_func_bd, list_eq, 'south', south_alpha_bd, south_beta_bd, n_part, xd_var)
 
             if north_bd.lower() == 'dirichlet':
                 list_north = dirichlet(north_func_bd, list_eq, 'north', n_part, xd_var, str_sp_vars, use_time_derivative=True)
             elif north_bd.lower() == 'neumann':
                 list_north = neumann(north_func_bd, list_eq, 'north', n_part, xd_var, str_sp_vars)
             elif north_bd.lower() == 'robin':
-                list_north = robin(north_func_bd, list_eq, 'north', north_alpha_bd, north_beta_bd, n_part, xd_var, str_sp_vars)
+                list_north = robin(north_func_bd, list_eq, 'north', north_alpha_bd, north_beta_bd, n_part, xd_var)
 
             if west_bd.lower() == 'dirichlet':
                 list_west = dirichlet(west_func_bd, list_eq, 'west', n_part, xd_var, str_sp_vars, use_time_derivative=True)
@@ -153,7 +166,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                 elif east_bd.lower() == 'neumann':
                     centro = neumann(east_func_bd,list_eq, 'east', n_part, xd_var, str_sp_vars)[func]
                 elif east_bd.lower() == 'robin':
-                    centro = robin(east_func_bd, list_eq, 'east', east_alpha_bd, east_beta_bd, n_part, xd_var, str_sp_vars)[func]
+                    centro = robin(east_func_bd, list_eq, 'east', east_alpha_bd, east_beta_bd, n_part, xd_var)[func]
                 else:
                     centro = []
                 for i in range(len(centro)):
@@ -164,8 +177,8 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
             for func in range(len(list_positions)):
                 C = 0
                 for i in range(len(list_positions[func])):
-                    if 'C' in list_positions[func][i]:
-                        list_positions[func][i] = list_eq[func][C]; C+=1
+                    if 'C' in list_positions[func][i]: list_positions[func][i] = list_eq[func][C]; C+=1
+                    
 
         if len(str_sp_vars) == 2:
             for func in range(len(list_positions)):
@@ -184,163 +197,196 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                         if not(f'XX{func}_{i}_{j}' in d_vars):
                             d_vars.append(f'XX{func}_{i}_{j}')
         elif len(str_sp_vars) == 1:
-            if not(f'XX{func}_{i}_0' in d_vars): d_vars.append(f'XX{func}_{i}_0')
+            for func in range(len(list_positions)):
+                for i in range(n_part[0]):
+                    name = f'XX{func}_{i}_0'
+                    if name not in d_vars:
+                        d_vars.append(name)
 
         flat_list_positions = []
         for L in list_positions:
             flat_list_positions.extend(L)
 
         # passos corretos: 1/(n-1)
-        for _ in range(len(str_sp_vars)):
-            for i in range(len(flat_list_positions)):
-                flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[0]}_', str(1/(n_part[_]-1)))
-                for j in range(len(xd_var)):
-                    flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[0]}_', str(1/(n_part[_]-1)))
+        hx_val = str(1.0 / (n_part[0] - 1))
+        if len(str_sp_vars) == 2:
+            hy_val = str(1.0 / (n_part[1] - 1))
+        for i in range(len(flat_list_positions)):
+            flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[0]}_', hx_val)
+            if len(str_sp_vars) == 2:
+                flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[0]}_', hy_val)
 
         return flat_list_positions, d_vars
 
 
-def dirichlet(bd_func, list_eq, bd, n_part, xd_var, str_sp_vars = '', use_time_derivative=False):
+def dirichlet(bd_func, list_eq, bd, n_part, xd_var, str_sp_vars = '', use_time_derivative=True):
     def maybe_dt(s: str) -> str:
         return d_dt(s) if use_time_derivative else s
 
     def replace_xy(expr: str, X: str, Y: str) -> str:
-        out = _repl_symbol(expr, str_sp_vars[0], X)
-        out = _repl_symbol(out,  str_sp_vars[1], Y)
+        out = _repl_symbol(expr, str_sp_vars[0], X)  # x
+        if len(str_sp_vars) == 2:
+            out = _repl_symbol(out,  str_sp_vars[1], Y)  # y
         return out
+    if len(str_sp_vars) == 2:
+        Nx, Ny = n_part[0], n_part[1]
+        hx = f'h{xd_var[0]}_'
+        hy = f'h{xd_var[0]}_'
+        
+            
+        if bd.lower() == 'north':
+            # y = (Ny-1)*hy, x = i*hx, i = 0..Nx-1
+            list_north = [[] for _ in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(Nx):
+                    expr = replace_xy(bd_func, f'{i} * {hx}', f'{Ny-1} * {hy}')
+                    list_north[func].append(maybe_dt(expr))
+            return list_north
 
-    if bd.lower() == 'north':
-        list_north = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(n_part[func]):
-                expr = replace_xy(bd_func, f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_')
-                list_north[func].append(maybe_dt(expr))
-        return list_north
+        elif bd.lower() == 'south':
+            # y = 0, x = i*hx
+            list_south = [[] for _ in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(Nx):
+                    expr = replace_xy(bd_func, f'{i} * {hx}', f'0 * {hy}')
+                    list_south[func].append(maybe_dt(expr))
+            return list_south
 
-    elif bd.lower() == 'south':
-        list_south = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(n_part[func]):
-                expr = replace_xy(bd_func, f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_')
-                list_south[func].append(maybe_dt(expr))
-        return list_south
+        elif bd.lower() == 'east':
+            # x = (Nx-1)*hx, y = j*hy, j = 0..Ny-1
+            list_east = [[] for _ in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for j in range(Ny):
+                    expr = replace_xy(bd_func, f'{Nx-1} * {hx}', f'{j} * {hy}')
+                    list_east[func].append(maybe_dt(expr))
+            return list_east
 
-    elif bd.lower() == 'east':
-        list_east = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(n_part[func]):
-                expr = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                list_east[func].append(maybe_dt(expr))
-        return list_east
+        elif bd.lower() == 'west':
+            # x = 0, y = j*hy
+            list_west = [[] for _ in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for j in range(Ny):
+                    expr = replace_xy(bd_func, f'0 * {hx}', f'{j} * {hy}')
+                    list_west[func].append(maybe_dt(expr))
+            return list_west
 
-    elif bd.lower() == 'west':
-        list_west = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(n_part[func]):
-                expr = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                list_west[func].append(maybe_dt(expr))
-        return list_west
-    else:
-        print("Invalid boundary. Try 'east', 'north' or 'south' ")
-        return []
+        else:
+            print("Invalid boundary. Try 'east', 'north' or 'south' ")
+            return []
+    elif len(str_sp_vars) == 1:
+        Nx = n_part[0]
+        hx = f'h{xd_var[0]}_'
+        if bd.lower() == 'west':
+            list_west = [[] for _ in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(Nx):
+                    expr = replace_xy(bd_func, f'{0} * {hx}', '')
+                    list_west[func].append(maybe_dt(expr))
+            return list_west
 
+        elif bd.lower() == 'east':
+            list_east = [[] for _ in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(Nx):
+                    expr = replace_xy(bd_func, f'{Nx-1} * {hx}', '')
+                    list_east[func].append(maybe_dt(expr))
+            return list_east
+
+        else:
+            print("Invalid boundary. Try 'east' or 'west' for 1D problems (without south/north). ")
+            return []
 
 def robin(bd_func, list_eq, bd, alpha, beta, n_part, xd_var, str_sp_vars = ''):
-    # def maybe_dt(s: str) -> str:
-    #     return d_dt(s) if use_time_derivative else s
+    if len(str_sp_vars) == 2:
+        # Deixado como antes (strings), pois Robin não foi o caso que disparou o erro.
+        if bd.lower() == 'north':
+            list_north = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for j in range(0, len(list_eq[func])):
+                    if j % (n_part[1]-2) == 0:
+                        list_north[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][j+n_part[1]-3]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
+            return list_north
 
-    def replace_xy(expr: str, X: str, Y: str) -> str:
-        out = _repl_symbol(expr, str_sp_vars[0], X)
-        out = _repl_symbol(out,  str_sp_vars[1], Y)
-        return out
-    
-    # Deixado como antes (strings), pois Robin não foi o caso que disparou o erro.
-    if bd.lower() == 'north':
-        list_north = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(0, len(list_eq[func])):
-                if j % (n_part[1]-2) == 0:
-                    expr_func = replace_xy(bd_func, f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_')
-                    expr_alpha = replace_xy(bd_func, f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_')
-                    expr_beta = replace_xy(bd_func, f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2)+n_part[1]-3)} * h{xd_var[0]}_')
-                    list_north[func].append(f'(h{xd_var[func]}_*{expr_func}-{list_eq[func][j+n_part[1]-3]}*({expr_alpha}*h{xd_var[func]}_-{expr_beta}))/{expr_beta}')
-        return list_north
+        elif bd.lower() == 'south':
+            list_south = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for j in range(0, len(list_eq[func])):
+                    if j % (n_part[1]-2) == 0:
+                        list_south[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][j]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
+            return list_south
 
-    elif bd.lower() == 'south':
-        list_south = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(0, len(list_eq[func])):
-                if j % (n_part[1]-2) == 0:
-                    expr_func = replace_xy(bd_func, f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_')
-                    expr_alpha = replace_xy(bd_func, f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_')
-                    expr_beta = replace_xy(bd_func, f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_')
-                    list_south[func].append(f'(h{xd_var[func]}_*{expr_func}-{list_eq[func][j]}*({expr_alpha}*h{xd_var[func]}_-{expr_beta}))/{expr_beta}')
-        return list_south
+        elif bd.lower() == 'east':
+            list_east = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range((n_part[1]-2)*(n_part[0]-2)-(n_part[1]-2), (n_part[1]-2)*(n_part[0]-2)):
+                    list_east[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][i]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
+            return list_east
 
-    elif bd.lower() == 'east':
-        list_east = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for i in range((n_part[1]-2)*(n_part[0]-2)-(n_part[1]-2), (n_part[1]-2)*(n_part[0]-2)):
-                expr_func = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                expr_alpha = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                expr_beta = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                list_east[func].append(f'(h{xd_var[func]}_*{expr_func}-{list_eq[func][i]}*({expr_alpha}*h{xd_var[func]}_-{expr_beta}))/{expr_beta}')
-        return list_east
-    
-    elif bd.lower() == 'west':
-        list_west = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(n_part[func]):
-                expr_func = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                expr_alpha = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                expr_beta = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                list_west[func].append(f'(h{xd_var[func]}_*{expr_func}-{list_eq[func][j]}*({expr_alpha}*h{xd_var[func]}_-{expr_beta}))/{expr_beta}')
-        return list_west
-    else:
-        print("Invalid boundary. Try 'east', 'north' or 'south' ")
-        return []
+        else:
+            print("Invalid boundary. Try 'east', 'north' or 'south' ")
+            return []
+    elif len(str_sp_vars) == 1:
+        if bd.lower() == 'west':
+            list_west = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(0, len(list_eq[func])):
+                    list_west[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][i]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
+            return list_west
 
+        elif bd.lower() == 'east':
+            list_east = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(0, len(list_eq[func])):
+                    list_east[func].append(f'(h{xd_var[func]}_*{bd_func}-{list_eq[func][i]}*({alpha}*h{xd_var[func]}_-{beta}))/{beta}')
+            return list_east
+
+        else:
+            print("Invalid boundary. Try 'east' or 'west' for 1D problems (without south/north). ")
+            return []
 
 def neumann(bd_func, list_eq, bd, n_part, xd_var, str_sp_vars = ''):
-    def replace_xy(expr: str, X: str, Y: str) -> str:
-        out = _repl_symbol(expr, str_sp_vars[0], X)
-        out = _repl_symbol(out,  str_sp_vars[1], Y)
-        return out
-    
-    if bd.lower() == 'north':
-        list_north = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(0, len(list_eq[func])):
-                if j % (n_part[1]-2) == 0:
-                    expr_func = replace_xy(bd_func, f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_')
-                    list_north[func].append(f'h{xd_var[0]}_*{expr_func}+{list_eq[func][j+n_part[1]-3]}')
-        return list_north
+    if len(str_sp_vars) == 2:
+        if bd.lower() == 'north':
+            list_north = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for j in range(0, len(list_eq[func])):
+                    if j % (n_part[1]-2) == 0:
+                        list_north[func].append(f'h{xd_var[0]}_*{bd_func}+{list_eq[func][j+n_part[1]-3]}')
+            return list_north
 
-    elif bd.lower() == 'south':
-        list_south = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(0, len(list_eq[func])):
-                if j % (n_part[1]-2) == 0:
-                    expr_func = replace_xy(bd_func, f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_', f'{int(j / (n_part[1]-2))} * h{xd_var[0]}_')
-                    list_south[func].append(f'h{xd_var[func]}_*{expr_func}+{list_eq[func][j]}')
-        return list_south
+        elif bd.lower() == 'south':
+            list_south = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for j in range(0, len(list_eq[func])):
+                    if j % (n_part[1]-2) == 0:
+                        list_south[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][j]}')
+            return list_south
 
-    elif bd.lower() == 'east':
-        list_east = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range((n_part[1]-2)*(n_part[0]-2)-(n_part[1]-2), (n_part[1]-2)*(n_part[0]-2)):
-                expr_func = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                list_east[func].append(f'h{xd_var[func]}_*{expr_func}+{list_eq[func][j]}')
-        return list_east
-    
-    elif bd.lower() == 'west':
-        list_west = [[] for i in range(len(list_eq))]
-        for func in range(len(list_eq)):
-            for j in range(n_part[func]):
-                expr_func = replace_xy(bd_func, f'{j} * h{xd_var[0]}_', f'{j} * h{xd_var[0]}_')
-                list_west[func].append(f'h{xd_var[func]}_*{expr_func}+{list_eq[func][j]}')
-        return list_west
-    
-    else:
-        print("Invalid boundary. Try 'east', 'north' or 'south' ")
-        return []
+        elif bd.lower() == 'east':
+            list_east = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range((n_part[1]-2)*(n_part[0]-2)-(n_part[1]-2), (n_part[1]-2)*(n_part[0]-2)):
+                    list_east[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][i]}')
+            return list_east
+
+        else:
+            print("Invalid boundary. Try 'east', 'north' or 'south' ")
+            return []
+    elif len(str_sp_vars) == 1:
+        if bd.lower() == 'west':
+            list_west = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(0, len(list_eq[func])):
+                    list_west[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][i]}')
+            return list_west
+
+        elif bd.lower() == 'east':
+            list_east = [[] for i in range(len(list_eq))]
+            for func in range(len(list_eq)):
+                for i in range(0, len(list_eq[func])):
+                    list_east[func].append(f'h{xd_var[func]}_*{bd_func}+{list_eq[func][i]}')
+            return list_east
+
+        else:
+            print("Invalid boundary. Try 'east' or 'west' for 1D problems (without south/north). ")
+            return []

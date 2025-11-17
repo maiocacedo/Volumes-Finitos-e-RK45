@@ -13,7 +13,7 @@ import time
 start_time_df = time.time()
 #! Valores Iniciais
 
-disc_n=11
+disc_n=21
 pde_str = (
     "dF/dt = -dF/dx - dF/dy + 10*sech(t)**2 * x *(sin(x)+cos(y))+10*tanh(t)*(sin(x)+cos(y)+x*cos(x)-x*sin(y))"
 )
@@ -52,7 +52,7 @@ resultado = df(
 exec_time_df = time.time() - start_time_df
 
 start_time_rk_cuda = time.time()
-testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 0.1, 400, 1, len(PDES1.sp_vars))
+testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 0.1, 1000, 1, len(PDES1.sp_vars))
 exec_time_rk_cuda = time.time() - start_time_rk_cuda
 
 exec_time_total = time.time() - start_time_df
@@ -62,37 +62,30 @@ start_time_rk = time.time()
 exec_time_rk = time.time() - start_time_rk
 
 
+
 print(f"Tempo de execução df: {exec_time_df:.2f} segundos")
 print(f"Tempo de execução RK: {exec_time_rk:.2f} segundos")
-print(f"Tempo de execução RK_cuda: {exec_time_rk_cuda:.2f} segundos")
+print(f"Tempo de execução RK CUDA: {exec_time_rk_cuda:.2f} segundos")
 print(f"Tempo de execução total: {exec_time_total:.2f} segundos")
+
 
 print("Resultado Numérico:")
 print(testar[1][0][-1])
 
 print("Erro Absoluto:")
-
 erro_absoluto = np.abs(np.array(testar[1][0][-1]) - np.array(resultado_analitico))
 print(erro_absoluto)
-erro_absoluto = np.nan_to_num(erro_absoluto)
-erro_relativo = []
-# Erro absoluto (já como array 1D float)
-y_num = np.asarray(testar[1][0][-1], dtype=float)
-y_ref = np.asarray(resultado_analitico, dtype=float)
 
-erro_absoluto = np.abs(y_num - y_ref)
+print("Erro Relativo (%):")
+erro_relativo = (erro_absoluto / np.array(resultado_analitico)) * 100
+print(erro_relativo)
 
-# Denominador protegido (evita divisão por zero)
-den = np.maximum(np.abs(y_ref), 1e-12)
-erro_relativo = (erro_absoluto / den) * 100.0
-
-erro_relativo = np.nan_to_num(np.array(erro_relativo))
 print("Erro Médio Absoluto:")
-erro_medio_absoluto = np.mean(np.nan_to_num(erro_absoluto))
+erro_medio_absoluto = np.mean(erro_absoluto)
 print(erro_medio_absoluto)
 
 print("Erro Médio Relativo:")
-erro_medio_relativo = np.mean(np.nan_to_num(erro_relativo))
+erro_medio_relativo = np.mean(erro_relativo)
 print(erro_medio_relativo)
 
 df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])

@@ -1,34 +1,30 @@
+import time
 from PDES import PDES 
 import PDE
-import SERKF45
 from Disc_tokenfix import df
-import RKF45_novo as RK
+import SERKF45_corrigido as RK
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.animation import FuncAnimation
-import time
 
-start_time_df = time.time()
 
 #! Valores Iniciais
 
-disc_n=11
+disc_n=21
 
-PDE1 = PDE.PDE('dF/dt = d2F/dx2 + d2F/dy2 + 1',  
-                ['F'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], 'x + y')
-
-
+PDE1 = PDE.PDE('dT/dt = -dT/dx - dT/dy + 10*sech(t)**2 * x *(sin(x)+cos(y))+10*tanh(t)*(sin(x)+cos(y)+x*cos(x)-x *sin(y))',
+                ['T'], ['x','y'],[disc_n,disc_n], [(0,1),(0,1)], '0')
 
 
+
+tfinal = 1
 resultado_analitico = []
 for i in range(disc_n):
     for j in range(disc_n):
         x_ = i/(disc_n-1)
         y_ = j/(disc_n-1)
-        t = 1
-        F_analitico = t + x_ + y_
-        # G_analitico = t + np.cosh(x_ - y_)
+        F_analitico = float(10*x_*np.tanh(tfinal)*(np.sin(x_)+np.cos(y_)))
         resultado_analitico.append(F_analitico)
         # resultado_analitico.append(G_analitico)
 
@@ -36,28 +32,30 @@ for i in range(disc_n):
 print("Resultado Analítico:")
 print(resultado_analitico)
 
-PDES1 = PDES([PDE1], ['x','y'], ['F'])
-inlet = 'Dirichlet'
+PDES1 = PDES([PDE1], ['x','y'], ['T'])
 
-resultado = df(PDES1, [disc_n,disc_n], 
-               west_bd="Dirichlet",
-               method="central",
-               north_bd="Dirichlet", south_bd="Dirichlet",east_bd="Dirichlet",
-               west_func_bd='y+t',
-               north_func_bd='t+x+1', south_func_bd='t+x', east_func_bd='t+y+1'
-               )
+start_time_df = time.time()
+resultado = df(
+    PDES1, [disc_n, disc_n],
+    west_bd="Dirichlet",
+    method="backward",
+    north_bd="Dirichlet", south_bd="Dirichlet", east_bd="Dirichlet",  # west via inlet
+    north_func_bd='10*x*tanh(t)*(sin(x)+cos(1))',
+    south_func_bd = '10*x*tanh(t)*(sin(x)+1)',
+    east_func_bd = '10*tanh(t)*(sin(1)+cos(y))',
+    west_func_bd = '0'
+)
 exec_time_df = time.time() - start_time_df
 
-start_time_rk = time.time()
-# testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 400, 1, len(PDES1.sp_vars))
-testar = SERKF45.SERKF45(resultado[0], ['t'], resultado[1], PDES1.ic, 0, 1, 400, 1, len(PDES1.sp_vars))
-exec_time_rk = time.time() - start_time_rk
+start_time_rk_cuda = time.time()
+
+testar = RK.SERKF45_cuda(resultado[0], ['t'], resultado[1], PDES1.ic, 0, tfinal, 1000, 1, len(PDES1.sp_vars))
+
+exec_time_rk_cuda = time.time() - start_time_rk_cuda
 
 exec_time_total = time.time() - start_time_df
 
-print(f"Tempo de execução df: {exec_time_df:.2f} segundos")
-print(f"Tempo de execução RK: {exec_time_rk:.2f} segundos")
-print(f"Tempo de execução total: {exec_time_total:.2f} segundos")
+
 
 print("Resultado Numérico:")
 print(testar[1][0][-1])
@@ -67,7 +65,7 @@ erro_absoluto = np.abs(np.array(testar[1][0][-1]) - np.array(resultado_analitico
 print(erro_absoluto)
 
 print("Erro Relativo (%):")
-erro_relativo = (erro_absoluto / np.array(resultado_analitico)) * 100
+erro_relativo = (erro_absoluto / np.where(np.array(resultado_analitico) != 0, np.array(resultado_analitico), 1e-5)) * 100
 print(erro_relativo)
 
 print("Erro Médio Absoluto:")
@@ -78,30 +76,16 @@ print("Erro Médio Relativo:")
 erro_medio_relativo = np.mean(erro_relativo)
 print(erro_medio_relativo)
 
-df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])
+print(f"Tempo de execução df: {exec_time_df:.2f} segundos")
+print(f"Tempo de execução RK CUDA: {exec_time_rk_cuda:.2f} segundos")
+print(f"Tempo de execução total: {exec_time_total:.2f} segundos")
 
 
-x = np.linspace(0, 1, disc_n)
-y = np.linspace(0, 1, disc_n)
-X, Y = np.meshgrid(x, y, indexing='xy')   # X[y,x], Y[y,x]
+x = np.linspace(0,1,disc_n)
+y = np.linspace(0,1,disc_n)
+X, Y = np.meshgrid(x, y, indexing='xy')
 
-F_anal_mat = 1 + X + Y                    # t=1
-# Se o seu empacotamento linear usa ordem 'F':
-F_anal_vec = np.array(F_anal_mat, dtype=float).reshape(-1, order='F')
 
-F_num_vec = np.array(testar[1][0][-1], dtype=float)
-# Erros coerentes
-erro_abs = np.abs(F_num_vec - F_anal_vec)
-erro_rel = erro_abs / np.maximum(np.abs(F_anal_vec), 1e-15) * 100
-print("||erro||_inf:", erro_abs.max())
-print("MAE:", erro_abs.mean())
-print("R^2", 1 - np.sum(erro_abs**2) / np.sum((F_anal_vec - np.mean(F_anal_vec))**2))
-
-print(f"Tempo de execução: {exec_time_total:.2f} segundos")
-
-df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])
-
-df.to_excel("saida.xlsx", index=False)
 if len(PDES1.sp_vars) == 2:
     
     vetor = np.array(testar[1][0][-1], dtype=float)  # Convertendo para um array NumPy
@@ -151,7 +135,7 @@ if len(PDES1.sp_vars) == 2:
     ani = FuncAnimation(
         fig, update,
         frames=n_frames,
-        interval=50,      # ms entre frames
+        interval=10,      # ms entre frames
         repeat=False,
         blit=False         # blit não funciona bem em 3D
     )
@@ -165,4 +149,6 @@ if len(PDES1.sp_vars) == 2:
         metadata=dict(artist='Você'),
         bitrate=1800           # taxa de bits (quanto maior, melhor qualidade/tamanho)
     )
+
+
 

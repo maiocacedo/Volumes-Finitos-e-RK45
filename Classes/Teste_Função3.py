@@ -67,6 +67,7 @@ print("Erro Médio Relativo:")
 erro_medio_relativo = np.mean(erro_relativo)
 print(erro_medio_relativo)
 
+
 df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])
 
 
@@ -84,6 +85,7 @@ erro_abs = np.abs(F_num_vec - F_anal_vec)
 erro_rel = erro_abs / np.maximum(np.abs(F_anal_vec), 1e-15) * 100
 print("||erro||_inf:", erro_abs.max())
 print("MAE:", erro_abs.mean())
+print("R^2", 1 - np.sum(erro_abs**2) / np.sum((F_anal_vec - np.mean(F_anal_vec))**2))
 
 df = pd.DataFrame(testar[1][0][-1], columns=["Valores"])
 
