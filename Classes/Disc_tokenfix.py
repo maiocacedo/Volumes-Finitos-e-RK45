@@ -2,6 +2,8 @@
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
 import re
+
+# Função para calcular a derivada em relação ao tempo 't'
 def d_dt(expr_str: str) -> str:
     t = sp.Symbol('t')
     try:
@@ -15,6 +17,7 @@ def _repl_symbol(expr: str, sym: str, repl: str) -> str:
     pattern = rf'(?<![A-Za-z0-9_]){sym}(?![A-Za-z0-9_])'
     return re.sub(pattern, repl, expr)
 
+# Função principal de discretização por diferenças finitas
 def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann", south_bd = "neumann", east_bd = "neumann",
        north_func_bd = "0", south_func_bd = "0", west_func_bd = "0", east_func_bd = "0", north_alpha_bd = "0", south_alpha_bd = "0", east_alpha_bd = "0", north_beta_bd = "1", south_beta_bd = "1", east_beta_bd = "1" ):
 
@@ -28,7 +31,8 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
         for j in range(len(eqrs)):
             for i in range(len(xd_var)):
                 eqrs[j] = eqrs[j].replace(f'{str(pdes.funcs[i])}', f'{xd_var[i]}{str_sp_vars}')
-
+        
+        # substituir as derivadas parciais pelas diferenças finitas avançadas
         if (method == "forward"):
             for j in range(len(eqrs)):
                 for k in range(len(str_sp_vars)):
@@ -47,6 +51,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[0]}', f'ii * h{xd_var[0]}_')
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
 
+        # substituir as derivadas parciais pelas diferenças finitas centradas
         elif (method == "central"):
             for j in range(len(eqrs)):
                 for k in range(len(str_sp_vars)):
@@ -63,13 +68,15 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                 
             for j in range(len(eqrs)):
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[0]}', f'ii * h{xd_var[0]}_')
-                eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
+                if len(str_sp_vars) == 2:
+                    eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
 
+        # substituir as derivadas parciais pelas diferenças finitas atrasadas
         elif (method == "backward"):
-            for j in range(len(eqrs)):
-                for k in range(len(str_sp_vars)):
+            for j in range(len(eqrs)): # loop para cada equação
+                for k in range(len(str_sp_vars)): # loop para cada variável espacial
                     if k == 0:
-                        for i in range(len(xd_var)):
+                        for i in range(len(xd_var)): # loop para cada função
                             eqrs[j] = eqrs[j].replace(f'd2{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}2', f'({xd_var[i]}_i+1_j - 2*{xd_var[i]}_ii_j + {xd_var[i]}_i-1_j)/ h{xd_var[i]}_ ** 2')
                             eqrs[j] = eqrs[j].replace(f'd{xd_var[i]}{str_sp_vars}/d{str_sp_vars[k]}', f'({xd_var[i]}_ii_j - {xd_var[i]}_i-1_j)/ h{xd_var[i]}_')
                     elif k == 1:
@@ -93,9 +100,9 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
         list_eq = [[] for i in range(len(partial_list_eq))]
 
         if len(str_sp_vars) == 2:
-            for j in range(len(partial_list_eq)):
-                for i in range(len(partial_list_eq[j])):
-                    for k in range(1,n_part[1]-1):
+            for j in range(len(partial_list_eq)): # loop nas equações
+                for i in range(len(partial_list_eq[j])): # loop nos pontos da malha na direção x
+                    for k in range(1,n_part[1]-1): # loop nos pontos da malha na direção y
                         list_eq[j].append(partial_list_eq[j][i].replace('j+1', str(k+1)).replace('j-1', str(k-1)).replace('j-2', str(k-2)).replace('j+2', str(k+2)).replace('j',str(k)))
         elif len(str_sp_vars) == 1:
             for j in range(len(partial_list_eq)):
@@ -103,6 +110,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                     list_eq[j].append(partial_list_eq[j][i].replace('j', str(0)))
 
         list_positions = []
+        # loop para definir as posições dos pontos de contorno
         if len(str_sp_vars) == 2:
             for func in range(len(pdes.funcs)):
                 list_aux = []
@@ -114,7 +122,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                         elif j == n_part[1]-1:     list_aux.append(f'N{func}_{i}_{j}')
                         else:                      list_aux.append(f'Ce{func}_{i}_{j}')
                 list_positions.append(list_aux)
-
+        # loop para definir os pontos de contorno 1D
         elif len(str_sp_vars) == 1:
             for func in range(len(pdes.funcs)):
                 list_aux = []
@@ -129,7 +137,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                     else: 
                         list_aux.append(f'Ce{func}{i}0')
                 list_positions.append(list_aux)
-
+        # definir os valores dos pontos de contorno
         if len(str_sp_vars) == 2:
             for func in range(len(list_positions)):
                 C = 0
@@ -159,6 +167,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                 list_west = [[] for _ in range(len(list_eq))]
 
             list_east = [[] for i in range(len(list_eq))]
+            # preencher os valores do contorno leste
             for func in range(len(list_eq)):
                 list_east[func].append(list_south[func][-1])
                 if east_bd.lower() == 'dirichlet':
@@ -172,14 +181,14 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                 for i in range(len(centro)):
                     list_east[func].append(centro[i])
                 list_east[func].append(list_north[func][-1])
-
+        # atribuir os valores corretos aos pontos de contorno 1D
         elif len(str_sp_vars) == 1:
             for func in range(len(list_positions)):
                 C = 0
                 for i in range(len(list_positions[func])):
                     if 'C' in list_positions[func][i]: list_positions[func][i] = list_eq[func][C]; C+=1
                     
-
+        # substituir os pontos de contorno pelos valores corretos
         if len(str_sp_vars) == 2:
             for func in range(len(list_positions)):
                 S = 0; N = 0; E = 0; W = 0
@@ -204,6 +213,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                         d_vars.append(name)
 
         flat_list_positions = []
+        # flatten list_positions
         for L in list_positions:
             flat_list_positions.extend(L)
 
@@ -211,7 +221,7 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
         hx_val = str(1.0 / (n_part[0] - 1))
         if len(str_sp_vars) == 2:
             hy_val = str(1.0 / (n_part[1] - 1))
-        for i in range(len(flat_list_positions)):
+        for i in range(len(flat_list_positions)): # loop para substituir h pelos valores numéricos
             flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[0]}_', hx_val)
             if len(str_sp_vars) == 2:
                 flat_list_positions[i] = flat_list_positions[i].replace(f'h{xd_var[0]}_', hy_val)

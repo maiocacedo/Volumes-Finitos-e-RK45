@@ -69,7 +69,7 @@ def norm_errors(err_vec, ref_vec=None, eps=1e-12):
 # Valores Iniciais e configuração do problema
 # ============================================================
 
-disc_n = 5
+disc_n = 11
 nu = 0.1
 
 PDE1 = PDE.PDE(

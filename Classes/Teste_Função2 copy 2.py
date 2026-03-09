@@ -15,8 +15,8 @@ start_time_df = time.time()
 
 disc_n = 5
 
-PDE1 = PDE.PDE('dF/dt = d2F/dx2 + (x-t**2)*exp(t*x)',
-               ['F'], ['x'], [disc_n], [(0, 1)], '2')
+PDE1 = PDE.PDE('dF/dt =  ln(t**2 + 1) - t',
+               ['F'], ['x'], [disc_n], [(0, 1)], '0')
 
 resultado_analitico = []
 # for i in range(disc_n):
@@ -29,24 +29,24 @@ resultado_analitico = []
 #         resultado_analitico.append(F_analitico)
 #         # resultado_analitico.append(G_analitico)
 
-# print("Resultado Analítico:")
-# print(resultado_analitico)
+print("Resultado Analítico:")
+print(resultado_analitico)
 
 PDES1 = PDES([PDE1], ['x'], ['F'])
 
 
 resultado = df(
     PDES1, [disc_n],
-    west_func_bd="(t+1)*sin(0)+(t+2)",  # x=0
+    west_func_bd="(1/3)*t**3-0.5*t**2",  # x=0
     west_bd="Dirichlet",
     method="central",
     north_bd="Dirichlet", south_bd="Dirichlet", east_bd="Dirichlet",  
     # north_func_bd='(t+1)*sin(x)+(t+2)*cos(1)',   # y=1
     # south_func_bd='(t+1)*sin(x)+(t+2)*cos(0)',   # y=0          
-    east_func_bd='(t+1)*sin(1)+(t+2)'     # x=1
+    east_func_bd='(1/3)*t**3-0.5*t**2'     # x=1
 )
 
-# print("Resultado Discretizado:")
+print("Resultado Discretizado:")
 print(resultado[0])
 
 N = 50           # Malha 50x50
@@ -57,8 +57,8 @@ resultado_final = CN.cn_1d(
     resultado[0],
     resultado[1],
     nt=100,
-    dt=0.01,
-    u_init_val=0.0
+    dt=0.001,
+    u_init_val=0
 )
 
 print("Resultado Final da Simulação 1D:")
