@@ -3,13 +3,19 @@ import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
 import cupy as cp
 from FuncAux import symbol_references
+import re
+
+def natural_sort_key(s):
+    return [int(text) if text.isdigit() else text.lower()
+            for text in re.split('([0-9]+)', s)]
 
 def SERKF45_cuda(oldexpr, ivar, funcs, yn, x0, xn, n, n_funcs, sp_vars, dt_max=None, tol=1e-5, dt_init=None):
     iteration = 0
     # =========================
     # 1) Simbolos consistentes
     # =========================
-    olddvar = symbol_references(funcs)   # ['y1','y2',...]
+
+    olddvar = sorted(symbol_references(funcs), key=natural_sort_key)   # ['y1','y2',...]
     oldivar = symbol_references(ivar)    # ['t']
     sym_map = {name: sp.Symbol(name) for name in (oldivar + olddvar)}
     t_sym   = sym_map[oldivar[0]]
@@ -121,13 +127,15 @@ def SERKF45_cuda(oldexpr, ivar, funcs, yn, x0, xn, n, n_funcs, sp_vars, dt_max=N
 
             continue
         else:
+            
+            y[...] = y5  # Aceita passo: avanca estado e tempo
             # Aceita passo
             if n_funcs and (m % n_funcs == 0):
                 y_host = y.get().reshape((n_funcs, n_elements))
                 for jgrp in range(n_funcs):
                     final_list[jgrp].append(y_host[jgrp].tolist())
 
-            y[...] = y4
+            # y[...] = y4
             t = t + h
             iteration = iteration + 1
             #print(iteration)

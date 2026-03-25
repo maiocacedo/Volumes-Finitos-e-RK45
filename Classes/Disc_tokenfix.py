@@ -49,7 +49,8 @@ def df(pdes, n_part, west_bd = "neumann", method="forward", north_bd = "neumann"
                 
             for j in range(len(eqrs)):
                 eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[0]}', f'ii * h{xd_var[0]}_')
-                eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
+                if len(str_sp_vars) == 2:
+                    eqrs[j] = _repl_symbol(eqrs[j], f'{str_sp_vars[1]}', f'j * h{xd_var[0]}_')
 
         # substituir as derivadas parciais pelas diferenças finitas centradas
         elif (method == "central"):

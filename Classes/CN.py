@@ -2,75 +2,103 @@ import numpy as np
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
 
-# thomas_solver: Solucionador de sistema tridiagonal
 def thomas_solver(a, b, c, d):
+    """Resolve o sistema tridiagonal Ax = d."""
     n = len(d)
     cp, dp, x = np.zeros(n-1), np.zeros(n), np.zeros(n)
+    
+    # Eliminação progressiva
     cp[0] = c[0] / b[0]
     dp[0] = d[0] / b[0]
     for i in range(1, n):
-        m = b[i] - a[i] * cp[i-1]
-        if i < n-1: cp[i] = c[i] / m
-        dp[i] = (d[i] - a[i] * dp[i-1]) / m
+        denom = b[i] - a[i] * cp[i-1]
+        if i < n-1:
+            cp[i] = c[i] / denom
+        dp[i] = (d[i] - a[i] * dp[i-1]) / denom
+    
+    # Substituição regressiva
     x[-1] = dp[-1]
     for i in range(n-2, -1, -1):
         x[i] = dp[i] - cp[i] * x[i+1]
     return x
 
-# cn_1d: Solver Crank-Nicolson 1D
 def cn_1d(flat_list, d_vars, nt, dt, u_init_val):
+    """
+    Solver Crank-Nicolson 1D otimizado com Lambdify.
+    Resolve EDPs Lineares e Não-Lineares (via linearização de Picard).
+    """
     n = len(d_vars)
-    u = np.full(n, u_init_val)
-    symbols = {v: sp.Symbol(v) for v in d_vars}
-    tempo_objetivo = 1
-    nt = int(tempo_objetivo / dt)
+    u = np.full(n, u_init_val, dtype=np.float64)
     
-    t_sym = sp.Symbol('t') 
-    parsed_eqs = [parse_expr(eq_str) for eq_str in flat_list] 
+    # Preparação de Símbolos
+    t_sym = sp.Symbol('t')
+    sym_list = [sp.Symbol(v) for v in d_vars]
+    parsed_eqs = [parse_expr(eq_str) for eq_str in flat_list]
     
+    # --- ETAPA DE COMPILAÇÃO (FORA DO LOOP) ---
+    # Guardamos funções que calculam coeficientes e termos de fonte
+    mapa_coeficientes = {} 
+    
+    
+    for i, expr in enumerate(parsed_eqs):
+        mapa_coeficientes[i] = {'coeffs': [], 'fonte': None}
+        
+        # Borda (Dirichlet)
+        if i == 0 or i == n - 1:
+            mapa_coeficientes[i]['fonte'] = sp.lambdify((t_sym, *sym_list), expr)
+        else:
+            # Pontos internos: extrair dF/dt = Coeff*F + Fonte
+            # Note: Para não-lineares, o coeff_sym ainda terá símbolos
+            for j, sym in enumerate(sym_list):
+                coeff_sym = expr.coeff(sym)
+                if coeff_sym != 0:
+                    func_coeff = sp.lambdify((t_sym, *sym_list), coeff_sym)
+                    mapa_coeficientes[i]['coeffs'].append((j, func_coeff))
+            
+            # Extrair termo independente (fonte)
+            fonte_sym = expr.as_coeff_Add()[0]
+            mapa_coeficientes[i]['fonte'] = sp.lambdify((t_sym, *sym_list), fonte_sym)
+    
+    # --- LOOP DE TEMPO (ALTA PERFORMANCE) ---
+    tempo_total = nt * dt
     for passo in range(nt):
         tempo_atual = passo * dt
         a_diag, b_diag, c_diag = np.zeros(n), np.zeros(n), np.zeros(n)
         fontes_s = np.zeros(n)
         rhs = np.zeros(n)
-
-        for i, expr in enumerate(parsed_eqs):
-            expr_t = expr.subs(t_sym, tempo_atual)
-            
-            # MUDANÇA 1: Identificar claramente o que é borda (índices 0 e n-1)
-            if i == 0 or i == n - 1:
-                b_diag[i] = 1.0
-                fontes_s[i] = float(expr_t.evalf())
-            else:
-                # Pontos internos: tentam encontrar coeficientes espaciais
-                encontrou_coeficiente = False
-                for j, (v_name, sym) in enumerate(symbols.items()):
-                    coeff_sym = expr_t.coeff(sym)
-                    if coeff_sym != 0:
-                        encontrou_coeficiente = True
-                        coeff = float(coeff_sym)
-                        val_implícito = -(dt / 2.0) * coeff
-                        if i == j: b_diag[i] = 1.0 + val_implícito
-                        elif j == i - 1: a_diag[i] = val_implícito
-                        elif j == i + 1: c_diag[i] = val_implícito
-                
-                # MUDANÇA 2: Garantir que b_diag seja 1.0 se não houver termos de F (como na EDO)
-                if not encontrou_coeficiente:
-                    b_diag[i] = 1.0
-                
-                # Extrai o termo de fonte d(t)
-                fontes_s[i] = float(expr_t.as_coeff_Add()[0])
+        
+        # u_args ajuda a passar o array para o lambdify de uma vez
+        u_args = tuple(u)
 
         for i in range(n):
             if i == 0 or i == n - 1:
-                rhs[i] = fontes_s[i] # Dirichlet puro
+                b_diag[i] = 1.0
+                fontes_s[i] = mapa_coeficientes[i]['fonte'](tempo_atual, *u_args)
             else:
+                # Extrai coeficientes numéricos (linearização no tempo n)
+                for j, func_c in mapa_coeficientes[i]['coeffs']:
+                    c_val = func_c(tempo_atual, *u_args)
+                    val_implicito = -(dt / 2.0) * c_val
+                    
+                    if i == j: b_diag[i] = 1.0 + val_implicito
+                    elif j == i - 1: a_diag[i] = val_implicito
+                    elif j == i + 1: c_diag[i] = val_implicito
+                
+                # Termo de fonte numérico
+                fontes_s[i] = mapa_coeficientes[i]['fonte'](tempo_atual, *u_args)
+
+        # Montagem do Lado Direito (RHS) do Crank-Nicolson
+        for i in range(n):
+            if i == 0 or i == n - 1:
+                rhs[i] = fontes_s[i]
+            else:
+                # RHS = [I - (dt/2)A] * u^n + dt * fonte
                 rhs[i] = u[i] * (2.0 - b_diag[i])
-                if i > 0: rhs[i] -= a_diag[i] * u[i-1]
+                if i > 0:   rhs[i] -= a_diag[i] * u[i-1]
                 if i < n-1: rhs[i] -= c_diag[i] * u[i+1]
-                # MUDANÇA 3: O sinal da fonte deve ser POSITIVO para dF/dt = ... + d
                 rhs[i] += dt * fontes_s[i] 
-        
+
+        # Resolve o sistema linear tridiagonal
         u = thomas_solver(a_diag, b_diag, c_diag, rhs)
         
     return u
